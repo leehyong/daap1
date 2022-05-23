@@ -1,0 +1,15 @@
+**/node_modules
+.env
+**/.idea
+**/.vscode
+**/dist
+coverage
+coverage.json
+typechain
+**/yarn.lock
+
+#Hardhat files
+cache
+artifacts
+**/.DS_Store
+**/*.log
