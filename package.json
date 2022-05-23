@@ -6,7 +6,8 @@
   "scripts": {
     "compile": " npx hardhat compile",
     "test": " npx hardhat test",
-    "mumbai-test": " npx hardhat test --network mumbai test/mumbai-test.js"
+    "mumbai-test": " npx hardhat test --network mumbai test/mumbai-test.js",
+    "token-test": " npx hardhat test test/token-test.js"
   },
   "keywords": [],
   "author": "",

@@ -1,14 +1,14 @@
 <script>
-import Signers from './components/Signers.vue'
+import Token from './components/Token.vue'
 export default {
   components:{
-    Signers
+    Token
   }
 }
 </script>
 <template>
   <main>
-    <Signers/>
+    <Token/>
   </main>
 </template>
 
