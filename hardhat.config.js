@@ -26,7 +26,8 @@ module.exports = {
   networks: {
     mumbai: {
       // Mumbai testnet
-      url: "https://matic-mumbai.chainstacklabs.com",
+      url: process.env.MUMBAI_URL,
+      accounts:[process.env.METAMASK_PRIVATE_KEY],
       chainId: 80001
     }
   },
