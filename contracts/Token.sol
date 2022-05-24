@@ -19,6 +19,9 @@ contract Token {
     // A mapping is a key/value map. Here we store each account balance.
     mapping(address => uint256) balances;
 
+    event minted(address indexed from, address indexed to, uint256 amount);
+    event transferred(address indexed from, address indexed to, uint256 amount);
+
     /**
      * Contract initialization.
      *
@@ -47,6 +50,20 @@ contract Token {
         // Transfer the amount.
         balances[msg.sender] -= amount;
         balances[to] += amount;
+        emit transferred(msg.sender, to, amount);
+    }
+
+    function mint(address to, uint256 amount) external {
+        // Check if the transaction sender has enough tokens.
+        // If `require`'s first argument evaluates to `false` then the
+        // transaction will revert.
+        require(amount <= totalSupply, "Not enough total tokens");
+        require(balances[owner] >= amount, "Not enough tokens");
+
+        // Transfer the amount.
+        balances[owner] -= amount;
+        balances[to] += amount;
+        emit minted(msg.sender, to, amount);
     }
 
     /**

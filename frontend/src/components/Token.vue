@@ -4,18 +4,19 @@
     <div><h3>请选择地址进行铸币~</h3></div>
     <a-row>
       <a-col :span="8">
-        <a-select v-model:value="current" style="width: 100%">
+        <a-select v-model:value="mintAddr" style="width: 100%">
+          <a-select-option key="noop">请选择地址</a-select-option>
           <a-select-option v-for="ac in selectAccountOptions" :key="ac">{{ ac }}</a-select-option>
         </a-select>
       </a-col>
       <a-col :span="2" :offset="1">
-        <a-input-number v-model:value="amount" :min="1" :max="1000" />
+        <a-input-number v-model:value="amount" :min="1" :max="1000" placehodler="铸币数量" />
       </a-col>
       <a-col :span="4" :offset="1">
-        <a-button @click="mint" :disabled="minting">
+        <a-button @click="mint" :disabled="minting" type="primary">
           <template #icon>
             <loading-outlined v-if="minting" />
-            <dollar-outlined v-else/>
+            <dollar-outlined v-else />
           </template>
           铸币
         </a-button>
@@ -28,12 +29,13 @@
 
 <script>
 import { PROVIDER, TOKEN_CONTRACT } from "../contract";
-import {LoadingOutlined, DollarOutlined} from '@ant-design/icons-vue';
+import { LoadingOutlined, DollarOutlined } from "@ant-design/icons-vue";
 import { catchEm } from "../util";
+import store from "../store";
 
 export default {
   name: "Token",
-  components:{
+  components: {
     LoadingOutlined,
     DollarOutlined
   },
@@ -42,12 +44,14 @@ export default {
       ethereum: null,
       chainId: 0,
       owner: null,
-      current: null,
+      mintAddr: null,
       accounts: [],
       minting: false,
       tokenContract: null,
       dataSource: [],
-      amount:10,
+      amount: 10,
+      txs: [],
+      state: store.state
     };
   },
   async created() {
@@ -96,7 +100,7 @@ export default {
     },
 
     async mint() {
-      if (!this.current) return;
+      if (!this.mintAddr) return;
       if (this.minting) {
         this.$message.info("正在铸币中，请稍后...");
         return;
@@ -110,21 +114,13 @@ export default {
       try {
         this.minting = true;
         const daiWithSigner = await TOKEN_CONTRACT.connect(signer);
-        tx = await daiWithSigner.transfer(this.current, this.amount);
+        tx = await daiWithSigner.mint(this.mintAddr, this.amount);
       } catch (e) {
         this.minting = false;
         console.error(e);
         return;
       }
       this.minting = false;
-      console.log("tx hash: %s", tx);
-      for (let ac of this.dataSource) {
-        console.log(ac);
-        if (ac.account === this.current || ac.account === this.owner) {
-          ac.balance = await this.getAccountBalance(ac.account);
-          console.log("update balance", ac.account);
-        }
-      }
     },
 
     async getChainId() {
@@ -171,8 +167,21 @@ export default {
           balance: await this.getAccountBalance(account)
         });
       }
+    },
+
+    async 'state.transfer'(val) {
+      console.log("state", val)
+      if (!val || Object.keys(val).length === 0 || val.data === false) return;
+      for (let ac of this.dataSource) {
+        if (ac.account === val.from || ac.account === val.to) {
+          ac.balance = await this.getAccountBalance(ac.account);
+          console.log("update balance", ac.account);
+        }
+      }
+      store.clearAction()
     }
   }
+
 };
 </script>
 
