@@ -4,7 +4,7 @@
     <a-row>
       <a-col :span="8">
         <a-select v-model:value="current" style="width: 100%">
-          <a-select-option v-for="ac in accounts" :key="ac">{{ ac }}</a-select-option>
+          <a-select-option v-for="ac in selectAccountOptions" :key="ac">{{ ac }}</a-select-option>
         </a-select>
       </a-col>
       <a-col :span="4" :offset="1">
@@ -21,6 +21,7 @@ import TokenArtifact from "../contracts/Token.json";
 import contractAddress from "../contracts/contract-address.json";
 import { catchEm } from "../util";
 import { ethers } from "ethers";
+import { formatEther } from "@ethersproject/units/src.ts/index";
 
 export default {
   name: "Token",
@@ -28,22 +29,30 @@ export default {
     return {
       ethereum: null,
       chainId: 0,
+      owner: null,
       current: null,
       accounts: [],
       minting: false,
       tokenContract: null,
-      dataSource: []
+      dataSource: [],
     };
   },
-  async mounted() {
+  async created() {
     if (this.isInstalled) {
       this.ethereum = window.ethereum;
       await this.getChainId();
       await this.getAccounts();
+      await this.getTokenContract();
     }
   },
 
   computed: {
+    selectAccountOptions(){
+      const owner = this.owner;
+      console.log("owner", owner)
+      return this.accounts.filter(val => val !== owner)
+    },
+
     isInstalled() {
       return !!window.ethereum;
     },
@@ -53,14 +62,13 @@ export default {
           title: "账户",
           dataIndex: "account",
           key: "account",
-          width: "400px"
+          maxWidth: "400px"
         },
         {
           title: "余额(LT)",
           dataIndex: "balance",
           key: "balance",
-          width: "100px"
-
+          maxWidth: "100px"
         }
       ];
     }
@@ -73,10 +81,11 @@ export default {
         TokenArtifact.abi,
         this.getSigner()
       );
+      this.owner = await this.tokenContract.owner();
+      this.owner = this.owner.toLowerCase()
+      console.log(this.owner);
       console.log(await this.tokenContract.name());
       console.log(await this.tokenContract.symbol());
-      console.log(await this.tokenContract.owner());
-      console.log("balance",await this.formatEther(this.tokenContract.balanceOf(this.tokenContract.owner())));
       // this.tokenContract.on("Transfer", (from, to, amount, event) => {
       //   console.log(`${ from } sent ${ this.formatEther(amount) } to ${ to}`);
       //   // The event object contains the verbatim log data, the
@@ -84,31 +93,38 @@ export default {
       //   // transaction and receipt and event functions
       // });
     },
-    formatEther(amount){
-      return ethers.utils.formatUnits(amount, 18)
+    formatEther(amount) {
+      return ethers.utils.formatEther(amount);
     },
-    getSigner(){
+    getSigner() {
       return this.provider.getSigner(0);
     },
 
-    mint() {
+    async mint() {
       if (!this.current) return;
       if (this.minting) {
-        this.$message.info("正在铸币中，请稍后...")
+        this.$message.info("正在铸币中，请稍后...");
         return;
       }
       const signer = this.getSigner();
-      if (!signer){
-        this.$message.error("错误， 不能找到signer")
+      if (!signer) {
+        this.$message.error("错误， 不能找到signer");
         return;
       }
       this.minting = true;
       const daiWithSigner = this.tokenContract.connect(signer);
       // Each DAI has 18 decimal places
-      const dai = ethers.utils.parseUnits("5.0", 18);
-      const tx = daiWithSigner.transfer("ricmoo.firefly.eth", dai);
+      const dai = ethers.utils.parseEther("5.0");
+      const tx = daiWithSigner.transfer(this.current, dai);
+      console.log("tx", tx);
+      for (let ac in this.dataSource) {
+        if (ac.account === this.current || ac.account === this.owner) {
+          ac.balance = await this.getAccountBalance(ac.account);
+          console.log("update balance", ac.account, tx,);
+          break;
+        }
+      }
       this.minting = false;
-      console.log("tx", tx)
     },
 
     async getChainId() {
@@ -134,21 +150,26 @@ export default {
         return;
       }
       this.accounts = accounts[0]?.caveats[0]?.value || {};
+    },
+
+    async getAccountBalance(account) {
+      const balance = await this.tokenContract.balanceOf(account);
+      return balance.toString();
     }
   },
   watch: {
-    async accounts() {
-      if (!this.tokenContract) {
+    async accounts(val) {
+      if (!val || val.length === 0) return
+      if (!this.tokenContract){
         await this.getTokenContract();
       }
       this.dataSource.length = 0;
       for (const idx in this.accounts || {}) {
         const account = this.accounts[idx];
-        const balance = parseInt(this.formatEther(await this.tokenContract.balanceOf(account), 18), 10)
         this.dataSource.push({
           account,
-          balance
-        })
+          balance: await this.getAccountBalance(account)
+        });
       }
     }
   }
