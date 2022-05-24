@@ -54,6 +54,8 @@ contract Token {
     }
 
     function mint(address to, uint256 amount) external {
+        // Only owner can mint coin
+        require(msg.sender == owner);
         // Check if the transaction sender has enough tokens.
         // If `require`'s first argument evaluates to `false` then the
         // transaction will revert.
