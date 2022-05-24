@@ -17,11 +17,9 @@
 </template>
 
 <script>
-import TokenArtifact from "../contracts/Token.json";
-import contractAddress from "../contracts/contract-address.json";
+import { PROVIDER, TOKEN_CONTRACT } from "../contract";
 import { catchEm } from "../util";
 import { ethers } from "ethers";
-import { formatEther } from "@ethersproject/units/src.ts/index";
 
 export default {
   name: "Token",
@@ -34,7 +32,7 @@ export default {
       accounts: [],
       minting: false,
       tokenContract: null,
-      dataSource: [],
+      dataSource: []
     };
   },
   async created() {
@@ -47,10 +45,9 @@ export default {
   },
 
   computed: {
-    selectAccountOptions(){
+    selectAccountOptions() {
       const owner = this.owner;
-      console.log("owner", owner)
-      return this.accounts.filter(val => val !== owner)
+      return this.accounts.filter(val => val !== owner);
     },
 
     isInstalled() {
@@ -75,29 +72,17 @@ export default {
   },
   methods: {
     async getTokenContract() {
-      this.provider = new ethers.providers.Web3Provider(this.ethereum);
-      this.tokenContract = new ethers.Contract(
-        contractAddress.Token,
-        TokenArtifact.abi,
-        this.getSigner()
-      );
-      this.owner = await this.tokenContract.owner();
-      this.owner = this.owner.toLowerCase()
+      this.owner = await TOKEN_CONTRACT.owner();
+      this.owner = this.owner.toLowerCase();
       console.log(this.owner);
-      console.log(await this.tokenContract.name());
-      console.log(await this.tokenContract.symbol());
-      // this.tokenContract.on("Transfer", (from, to, amount, event) => {
+      console.log(await TOKEN_CONTRACT.name());
+      console.log(await TOKEN_CONTRACT.symbol());
+      //TOKENCONTRACT.on("Transfer", (from, to, amount, event) => {
       //   console.log(`${ from } sent ${ this.formatEther(amount) } to ${ to}`);
       //   // The event object contains the verbatim log data, the
       //   // EventFragment and functions to fetch the block,
       //   // transaction and receipt and event functions
       // });
-    },
-    formatEther(amount) {
-      return ethers.utils.formatEther(amount);
-    },
-    getSigner() {
-      return this.provider.getSigner(0);
     },
 
     async mint() {
@@ -106,25 +91,31 @@ export default {
         this.$message.info("正在铸币中，请稍后...");
         return;
       }
-      const signer = this.getSigner();
+      const signer = PROVIDER.getSigner();
       if (!signer) {
         this.$message.error("错误， 不能找到signer");
         return;
       }
-      this.minting = true;
-      const daiWithSigner = this.tokenContract.connect(signer);
-      // Each DAI has 18 decimal places
-      const dai = ethers.utils.parseEther("5.0");
-      const tx = daiWithSigner.transfer(this.current, dai);
-      console.log("tx", tx);
+      try {
+        this.minting = true;
+        const daiWithSigner = await TOKEN_CONTRACT.connect(signer);
+        // Each DAI has 18 decimal places
+        const dai = ethers.utils.parseEther("5.0");
+        const tx = daiWithSigner.transfer(this.current, dai);
+        console.log("tx", tx);
+      } catch (e) {
+        this.minting = false;
+        console.error(e);
+        return;
+      }
+      this.minting = false;
       for (let ac in this.dataSource) {
         if (ac.account === this.current || ac.account === this.owner) {
           ac.balance = await this.getAccountBalance(ac.account);
-          console.log("update balance", ac.account, tx,);
+          console.log("update balance", ac.account, tx);
           break;
         }
       }
-      this.minting = false;
     },
 
     async getChainId() {
@@ -153,14 +144,14 @@ export default {
     },
 
     async getAccountBalance(account) {
-      const balance = await this.tokenContract.balanceOf(account);
+      const balance = await TOKEN_CONTRACT.balanceOf(account);
       return balance.toString();
     }
   },
   watch: {
     async accounts(val) {
-      if (!val || val.length === 0) return
-      if (!this.tokenContract){
+      if (!val || val.length === 0) return;
+      if (!this.tokenContract) {
         await this.getTokenContract();
       }
       this.dataSource.length = 0;
