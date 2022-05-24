@@ -7,7 +7,7 @@ coverage
 coverage.json
 typechain
 **/yarn.lock
-
+frontend/src/contracts
 #Hardhat files
 cache
 artifacts
