@@ -22,7 +22,8 @@
         </a-button>
       </a-col>
     </a-row>
-    <a-table :dataSource="dataSource" :columns="columns" class="table" />
+    <a-table :dataSource="dataSource" :columns="columns" class="table">
+    </a-table>
   </div>
   <div v-else>Something wrong!</div>
 </template>
@@ -32,6 +33,7 @@ import { PROVIDER, TOKEN_CONTRACT } from "../contract";
 import { LoadingOutlined, DollarOutlined } from "@ant-design/icons-vue";
 import { catchEm } from "../util";
 import store from "../store";
+import {h} from 'vue';
 
 export default {
   name: "Token",
@@ -50,7 +52,6 @@ export default {
       tokenContract: null,
       dataSource: [],
       amount: 10,
-      txs: [],
       state: store.state
     };
   },
@@ -77,14 +78,21 @@ export default {
         {
           title: "账户",
           dataIndex: "account",
-          key: "account",
-          maxWidth: "400px"
+          customRender:({text, record}) =>{
+            let children = [text];
+            if (record.updatingBalance){
+              children.push(h(LoadingOutlined, {style:{
+                marginLeft:"10px",
+                }}))
+            }
+            return h("span", {}, children)
+          },
+          maxWidth: 400
         },
         {
           title: "余额(LT)",
           dataIndex: "balance",
-          key: "balance",
-          maxWidth: "100px"
+          maxWidth: 100
         }
       ];
     }
@@ -121,6 +129,7 @@ export default {
         return;
       }
       this.minting = false;
+      this.updateAccountLoading(this.owner, this.mintAddr);
     },
 
     async getChainId() {
@@ -151,6 +160,14 @@ export default {
     async getAccountBalance(account) {
       const balance = await TOKEN_CONTRACT.balanceOf(account);
       return balance.toString();
+    },
+
+    updateAccountLoading(_from, _to) {
+      for (let ac of this.dataSource) {
+        if (ac.account === _from || ac.account === _to) {
+          ac.updatingBalance = true;
+        }
+      }
     }
   },
   watch: {
@@ -164,21 +181,23 @@ export default {
         const account = this.accounts[idx];
         this.dataSource.push({
           account,
+          updatingBalance: false,
           balance: await this.getAccountBalance(account)
         });
       }
     },
 
-    async 'state.transfer'(val) {
-      console.log("state", val)
+    async "state.transfer"(val) {
+      console.log("state", val);
       if (!val || Object.keys(val).length === 0 || val.data === false) return;
       for (let ac of this.dataSource) {
         if (ac.account === val.from || ac.account === val.to) {
           ac.balance = await this.getAccountBalance(ac.account);
+          ac.updatingBalance = false;
           console.log("update balance", ac.account);
         }
       }
-      store.clearAction()
+      store.clearAction();
     }
   }
 
