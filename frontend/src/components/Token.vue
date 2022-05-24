@@ -1,14 +1,24 @@
 <template>
   <h1>欢迎使用LT web dapp</h1>
   <div v-if="isInstalled" class="box">
+    <div><h3>请选择地址进行铸币~</h3></div>
     <a-row>
       <a-col :span="8">
         <a-select v-model:value="current" style="width: 100%">
           <a-select-option v-for="ac in selectAccountOptions" :key="ac">{{ ac }}</a-select-option>
         </a-select>
       </a-col>
+      <a-col :span="2" :offset="1">
+        <a-input-number v-model:value="amount" :min="1" :max="1000" />
+      </a-col>
       <a-col :span="4" :offset="1">
-        <a-button @click="mint">铸币</a-button>
+        <a-button @click="mint" :disabled="minting">
+          <template #icon>
+            <loading-outlined v-if="minting" />
+            <dollar-outlined v-else/>
+          </template>
+          铸币
+        </a-button>
       </a-col>
     </a-row>
     <a-table :dataSource="dataSource" :columns="columns" class="table" />
@@ -18,11 +28,15 @@
 
 <script>
 import { PROVIDER, TOKEN_CONTRACT } from "../contract";
+import {LoadingOutlined, DollarOutlined} from '@ant-design/icons-vue';
 import { catchEm } from "../util";
-import { ethers } from "ethers";
 
 export default {
   name: "Token",
+  components:{
+    LoadingOutlined,
+    DollarOutlined
+  },
   data() {
     return {
       ethereum: null,
@@ -32,7 +46,8 @@ export default {
       accounts: [],
       minting: false,
       tokenContract: null,
-      dataSource: []
+      dataSource: [],
+      amount:10,
     };
   },
   async created() {
@@ -77,12 +92,7 @@ export default {
       console.log(this.owner);
       console.log(await TOKEN_CONTRACT.name());
       console.log(await TOKEN_CONTRACT.symbol());
-      //TOKENCONTRACT.on("Transfer", (from, to, amount, event) => {
-      //   console.log(`${ from } sent ${ this.formatEther(amount) } to ${ to}`);
-      //   // The event object contains the verbatim log data, the
-      //   // EventFragment and functions to fetch the block,
-      //   // transaction and receipt and event functions
-      // });
+
     },
 
     async mint() {
@@ -96,24 +106,23 @@ export default {
         this.$message.error("错误， 不能找到signer");
         return;
       }
+      let tx;
       try {
         this.minting = true;
         const daiWithSigner = await TOKEN_CONTRACT.connect(signer);
-        // Each DAI has 18 decimal places
-        const dai = ethers.utils.parseEther("5.0");
-        const tx = daiWithSigner.transfer(this.current, dai);
-        console.log("tx", tx);
+        tx = await daiWithSigner.transfer(this.current, this.amount);
       } catch (e) {
         this.minting = false;
         console.error(e);
         return;
       }
       this.minting = false;
-      for (let ac in this.dataSource) {
+      console.log("tx hash: %s", tx);
+      for (let ac of this.dataSource) {
+        console.log(ac);
         if (ac.account === this.current || ac.account === this.owner) {
           ac.balance = await this.getAccountBalance(ac.account);
-          console.log("update balance", ac.account, tx);
-          break;
+          console.log("update balance", ac.account);
         }
       }
     },

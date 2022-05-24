@@ -9,3 +9,11 @@ export  const TOKEN_CONTRACT = new ethers.Contract(
   TokenArtifact.abi,
   PROVIDER.getSigner()
 );
+
+
+// TOKEN_CONTRACT.on("Transfer", (from, to, amount, event) => {
+//   console.log(`${ from } sent ${ amount } to ${ to}`);
+//   // The event object contains the verbatim log data, the
+//   // EventFragment and functions to fetch the block,
+//   // transaction and receipt and event functions
+// });
