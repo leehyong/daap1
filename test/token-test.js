@@ -36,6 +36,7 @@ describe("Token contract", function () {
     // for it to be deployed(), which happens once its transaction has been
     // mined.
     hardhatToken = await Token.deploy();
+    await hardhatToken.init()
   });
 
   // You can nest describe calls to create subsections.
@@ -121,19 +122,6 @@ describe("Token contract", function () {
 
       const addr2Balance = await hardhatToken.balanceOf(addr2.address);
       expect(addr2Balance).to.equal(50);
-    });
-
-    it("Should emit minted event", async function () {
-      const initialOwnerBalance = await hardhatToken.balanceOf(owner.address);
-      // Transfer 100 tokens from owner to addr1.
-      // Check balances.
-      await expect(hardhatToken.mint(addr1.address, 100))
-        .to.emit(hardhatToken, 'minted')
-        .withArgs(owner.address, addr1.address, 100);
-      const finalOwnerBalance = await hardhatToken.balanceOf(owner.address);
-      expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
-      const addr1Balance = await hardhatToken.balanceOf(addr1.address);
-      expect(addr1Balance).to.equal(100);
     });
   });
 });

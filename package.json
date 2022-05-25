@@ -6,6 +6,7 @@
   "scripts": {
     "compile": " npx hardhat compile",
     "test": " npx hardhat test test/token-test.js",
+    "transparent-test": " npx hardhat test test/transparent-token-test.js",
     "uups-test": " npx hardhat test test/uups-token-test.js",
     "node-local": " npx hardhat node",
     "deploy-local": " npx hardhat run scripts/deploy.js ",

@@ -7,11 +7,11 @@ pragma solidity ^0.8.0;
 contract Token {
     // Some string type variables to identify the token.
     // The `public` modifier makes a variable readable from outside the contract.
-    string public name = "Lhy  Token";
-    string public symbol = "LT";
+    string public name;
+    string public symbol;
 
     // The fixed amount of tokens stored in an unsigned integer type variable.
-    uint256 public totalSupply = 10000000;
+    uint256 public totalSupply;
 
     // An address type variable is used to store ethereum accounts.
     address public owner;
@@ -19,15 +19,19 @@ contract Token {
     // A mapping is a key/value map. Here we store each account balance.
     mapping(address => uint256) balances;
 
-    event minted(address indexed from, address indexed to, uint256 amount);
-    event transferred(address indexed from, address indexed to, uint256 amount);
+
+    event Transfer(address indexed from, address indexed to, uint256 amount);
 
     /**
      * Contract initialization.
      *
      * The `constructor` is executed only once when the contract is created.
      */
-    constructor() {
+
+    function init() public {
+        name = "Lhy  Token";
+        symbol = "LT";
+        totalSupply = 10000000;
         // The totalSupply is assigned to transaction sender, which is the account
         // that is deploying the contract.
         owner = msg.sender;
@@ -50,9 +54,24 @@ contract Token {
         // Transfer the amount.
         balances[msg.sender] -= amount;
         balances[to] += amount;
-        emit transferred(msg.sender, to, amount);
+        emit Transfer(msg.sender, to, amount);
     }
 
+
+
+    /**
+     * Read only function to retrieve the token balance of a given account.
+     *
+     * The `view` modifier indicates that it doesn't modify the contract's
+     * state, which allows us to call it without executing a transaction.
+     */
+    function balanceOf(address account) external view returns (uint256) {
+        return balances[account];
+    }
+}
+
+
+contract TransparentProxyToken is Token {
     function mint(address to, uint256 amount) external {
         // Only owner can mint coin
         require(msg.sender == owner);
@@ -65,16 +84,6 @@ contract Token {
         // Transfer the amount.
         balances[owner] -= amount;
         balances[to] += amount;
-        emit minted(msg.sender, to, amount);
-    }
-
-    /**
-     * Read only function to retrieve the token balance of a given account.
-     *
-     * The `view` modifier indicates that it doesn't modify the contract's
-     * state, which allows us to call it without executing a transaction.
-     */
-    function balanceOf(address account) external view returns (uint256) {
-        return balances[account];
+        emit Transfer(msg.sender, to, amount);
     }
 }
