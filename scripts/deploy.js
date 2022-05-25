@@ -18,11 +18,11 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
   // We get the contract to deploy
-  const Token = await hre.ethers.getContractFactory("Token");
-  const token = await Token.deploy();
+  const Token = await hre.ethers.getContractFactory("UupsToken");
+  const token = await hre.upgrades.deployProxy(Token, { kind: "uups" });
 
   await token.deployed();
-  console.log("Greeter deployed to:", token.address);
+  console.log("UupsToken deployed to:", token.address);
   saveFrontendFiles(token)
 }
 
