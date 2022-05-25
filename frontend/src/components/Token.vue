@@ -122,7 +122,7 @@ export default {
       try {
         this.minting = true;
         const daiWithSigner = await TOKEN_CONTRACT.connect(signer);
-        tx = await daiWithSigner.mint(this.mintAddr, this.amount);
+        tx = await daiWithSigner.transfer(this.mintAddr, this.amount);
       } catch (e) {
         this.minting = false;
         console.error(e);

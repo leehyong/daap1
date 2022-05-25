@@ -11,7 +11,7 @@ export  const TOKEN_CONTRACT = new ethers.Contract(
 );
 
 
-TOKEN_CONTRACT.on("minted", (from, to, amount, event) => {
+TOKEN_CONTRACT.on("Transfer", (from, to, amount, event) => {
   console.log(`${ from } sent ${ amount } to ${ to}, event:${event}`);
   state.setAction({
     from:from.toLowerCase(),
