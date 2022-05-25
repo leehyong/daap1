@@ -11,6 +11,7 @@
     "node-local": " npx hardhat node",
     "deploy-local": " npx hardhat run scripts/deploy.js ",
     "deploy-mumbai": " npx hardhat run --network mumbai scripts/deploy.js ",
+    "transparent-deploy-mumbai": " npx hardhat run --network mumbai scripts/deploy-transparent.js ",
     "mumbai-test": " npx hardhat test --network mumbai test/mumbai-test.js",
     "token-test": " npx hardhat test test/token-test.js"
   },

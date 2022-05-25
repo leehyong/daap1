@@ -39,8 +39,10 @@ describe("Token contract", function() {
     // To deploy our contract, we just have to call Token.deploy() and await
     // for it to be deployed(), which happens once its transaction has been
     // mined.
-    hardhatToken = await upgrades.deployProxy(Token, [], { initializer: "init" });
+    hardhatToken = await upgrades.deployProxy(Token);
+    // hardhatToken = await upgrades.deployProxy(Token, [], { initializer: "init" });
     transparentHardhatToken = await upgrades.upgradeProxy(hardhatToken.address, TransparentToken);
+    await transparentHardhatToken.deployed()
     console.log(hardhatToken.address, "Token Address")
     console.log(transparentHardhatToken.address, "Transparent Address")
     console.log(await upgrades.erc1967.getImplementationAddress(transparentHardhatToken.address), " getImplementationAddress");

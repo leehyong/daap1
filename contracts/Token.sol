@@ -2,9 +2,9 @@
 // It will be used by the Solidity compiler to validate its version.
 pragma solidity ^0.8.0;
 
-
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 // This is the main building block for smart contracts.
-contract Token {
+contract Token is Initializable{
     // Some string type variables to identify the token.
     // The `public` modifier makes a variable readable from outside the contract.
     string public name;
@@ -28,7 +28,7 @@ contract Token {
      * The `constructor` is executed only once when the contract is created.
      */
 
-    function init() public {
+    function initialize() public initializer {
         name = "Lhy  Token";
         symbol = "LT";
         totalSupply = 10000000;
@@ -70,20 +70,3 @@ contract Token {
     }
 }
 
-
-contract TransparentProxyToken is Token {
-    function mint(address to, uint256 amount) external {
-        // Only owner can mint coin
-        require(msg.sender == owner);
-        // Check if the transaction sender has enough tokens.
-        // If `require`'s first argument evaluates to `false` then the
-        // transaction will revert.
-        require(amount <= totalSupply, "Not enough total tokens");
-        require(balances[owner] >= amount, "Not enough tokens");
-
-        // Transfer the amount.
-        balances[owner] -= amount;
-        balances[to] += amount;
-        emit Transfer(msg.sender, to, amount);
-    }
-}
