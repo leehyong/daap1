@@ -14,7 +14,8 @@
     "test": " npx hardhat test test/token-test.js",
     "transparent-test": " npx hardhat test test/transparent-token-test.js",
     "uups-test": " npx hardhat test test/uups-token-test.js",
-    "erc1155-test": " npx hardhat test test/erc1155-uups-token-test.js"
+    "erc1155-test": " npx hardhat test test/erc1155-token-test.js",
+    "erc1155-redeem-test": " npx hardhat test test/erc1155-token-redeem-test.js"
   },
   "keywords": [],
   "author": "",
