@@ -5,15 +5,16 @@
   "main": "index.js",
   "scripts": {
     "compile": " npx hardhat compile",
-    "test": " npx hardhat test test/token-test.js",
-    "transparent-test": " npx hardhat test test/transparent-token-test.js",
-    "uups-test": " npx hardhat test test/uups-token-test.js",
     "node-local": " npx hardhat node",
     "deploy-local": " npx hardhat run scripts/deploy.js ",
     "deploy-mumbai": " npx hardhat run --network mumbai scripts/deploy.js ",
     "transparent-deploy-mumbai": " npx hardhat run --network mumbai scripts/deploy-transparent.js ",
     "mumbai-test": " npx hardhat test --network mumbai test/mumbai-test.js",
-    "token-test": " npx hardhat test test/token-test.js"
+    "token-test": " npx hardhat test test/token-test.js",
+    "test": " npx hardhat test test/token-test.js",
+    "transparent-test": " npx hardhat test test/transparent-token-test.js",
+    "uups-test": " npx hardhat test test/uups-token-test.js",
+    "erc1155-test": " npx hardhat test test/erc1155-uups-token-test.js"
   },
   "keywords": [],
   "author": "",
@@ -41,6 +42,7 @@
     "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^4.6.0",
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@openzeppelin/hardhat-upgrades": "^1.17.0"
   }
