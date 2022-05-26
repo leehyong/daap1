@@ -32,7 +32,7 @@ describe("Token contract", function() {
   beforeEach(async function() {
     // Get the ContractFactory and Signers here.
     await run("compile");
-    Token = await ethers.getContractFactory("ERC1155UUPSToken");
+    Token = await ethers.getContractFactory("ERC1155UUPSPaymentToken");
     // Token = await ethers.getContractFactory("ERC1155UUPSToken");
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
     // To deploy our contract, we just have to call Token.deploy() and await
@@ -70,7 +70,7 @@ describe("Token contract", function() {
   describe("Transactions", function() {
     it("Should transfer tokens between accounts", async function() {
       // Transfer 50 tokens from owner to addr1
-      await hardhatToken.safeTransferFrom(owner.address, addr1.address,tokenId, 50, ethers.utils.formatBytes32String("50"));
+      await hardhatToken.safeTransferFrom(owner.address, addr1.address, tokenId, 50, ethers.utils.formatBytes32String("50"));
       const addr1Balance = await hardhatToken.balanceOf(addr1.address, tokenId);
       expect(addr1Balance).to.equal(50);
 
@@ -122,11 +122,176 @@ describe("Token contract", function() {
       // Check balances.
       await expect(hardhatToken.safeTransferFrom(owner.address, addr1.address, tokenId, 100, ethers.utils.formatBytes32String("event")))
         .to.emit(hardhatToken, "TransferSingle")
-        .withArgs(owner.address,owner.address, addr1.address, tokenId, 100);
+        .withArgs(owner.address, owner.address, addr1.address, tokenId, 100);
       const finalOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
       expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
       const addr1Balance = await hardhatToken.balanceOf(addr1.address, tokenId);
       expect(addr1Balance).to.equal(100);
+    });
+
+
+    it("Should pay success", async function() {
+      const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      // Transfer 100 tokens from owner to addr1.
+      // Check balances.
+      await expect(hardhatToken.safeTransferFrom(owner.address, addr1.address, tokenId, 100, ethers.utils.formatBytes32String("event")))
+        .to.emit(hardhatToken, "TransferSingle")
+        .withArgs(owner.address, owner.address, addr1.address, tokenId, 100);
+      const finalOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
+      const addr1Balance = await hardhatToken.balanceOf(addr1.address, tokenId);
+      expect(addr1Balance).to.equal(100);
+      const amount = 20;
+      const nonce = new Date().valueOf();
+      // https://github.com/ethers-io/ethers.js/issues/468
+      // step 1
+      // 66 byte string, which represents 32 bytes of data
+      const messageHash = ethers.utils.solidityKeccak256(
+        ["address", "address", "uint256", "uint256", "uint256"],
+        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+      );
+      // step 2
+      // 32 bytes of data in Uint8Array
+      let messageHashBinary = ethers.utils.arrayify(messageHash);
+      const addr1Connect = await hardhatToken.connect(addr1);
+      // step 3
+      // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
+      const signature = await addr1.signMessage(messageHashBinary);
+      console.log("origin   ", addr1.address);
+      console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
+      expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
+      await expect(
+        addr1Connect.pay(tokenId, amount, nonce, signature)
+      ).to.emit(hardhatToken, "TransferSingle")
+        .withArgs(addr1.address, addr1.address, owner.address, tokenId, 20);
+    });
+
+    it("Reverted Invalid signature", async function() {
+      const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      // Transfer 100 tokens from owner to addr1.
+      // Check balances.
+      await expect(hardhatToken.safeTransferFrom(owner.address, addr1.address, tokenId, 100, ethers.utils.formatBytes32String("event")))
+        .to.emit(hardhatToken, "TransferSingle")
+        .withArgs(owner.address, owner.address, addr1.address, tokenId, 100);
+      const finalOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
+      const addr1Balance = await hardhatToken.balanceOf(addr1.address, tokenId);
+      expect(addr1Balance).to.equal(100);
+      const amount = 20;
+      const nonce = new Date().valueOf();
+      // https://github.com/ethers-io/ethers.js/issues/468
+      // step 1
+      // 66 byte string, which represents 32 bytes of data
+      const messageHash = ethers.utils.solidityKeccak256(
+        ["address", "address", "uint256", "uint256", "uint256"],
+        // 交换amount 和nonce 的顺序，从而故意让签名验证失败
+        [addr1.address, hardhatToken.address, tokenId, amount, nonce]
+      );
+      // step 2
+      // 32 bytes of data in Uint8Array
+      let messageHashBinary = ethers.utils.arrayify(messageHash);
+      const addr1Connect = await hardhatToken.connect(addr1);
+      // step 3
+      // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
+      const signature = await addr1.signMessage(messageHashBinary);
+      console.log("origin   ", addr1.address);
+      console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
+      expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
+      await expect(
+        addr1Connect.pay(tokenId, amount, nonce, signature)
+      ).to.be.revertedWith("Invalid signature");
+    });
+
+    it("Reverted Used nonce", async function() {
+      const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      // Transfer 100 tokens from owner to addr1.
+      // Check balances.
+      await expect(hardhatToken.safeTransferFrom(owner.address, addr1.address, tokenId, 100, ethers.utils.formatBytes32String("event")))
+        .to.emit(hardhatToken, "TransferSingle")
+        .withArgs(owner.address, owner.address, addr1.address, tokenId, 100);
+      const finalOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
+      const addr1Balance = await hardhatToken.balanceOf(addr1.address, tokenId);
+      expect(addr1Balance).to.equal(100);
+      let amount = 20;
+      const nonce = new Date().valueOf();
+      // https://github.com/ethers-io/ethers.js/issues/468
+      // step 1
+      // 66 byte string, which represents 32 bytes of data
+      let messageHash = ethers.utils.solidityKeccak256(
+        ["address", "address", "uint256", "uint256", "uint256"],
+        // 交换amount 和nonce 的顺序，从而故意让签名验证失败
+        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+      );
+      // step 2
+      // 32 bytes of data in Uint8Array
+      let messageHashBinary = ethers.utils.arrayify(messageHash);
+      const addr1Connect = await hardhatToken.connect(addr1);
+      // step 3
+      // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
+      let signature = await addr1.signMessage(messageHashBinary);
+      console.log("origin   ", addr1.address);
+      console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
+      expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
+      await expect(
+        addr1Connect.pay(tokenId, amount, nonce, signature)
+      ).to.emit(hardhatToken, "TransferSingle")
+        .withArgs(addr1.address, addr1.address, owner.address, tokenId, 20);
+      amount = 30;
+      // step 1
+      // 66 byte string, which represents 32 bytes of data
+      messageHash = ethers.utils.solidityKeccak256(
+        ["address", "address", "uint256", "uint256", "uint256"],
+        // 交换amount 和nonce 的顺序，从而故意让签名验证失败
+        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+      );
+      // step 2
+      // 32 bytes of data in Uint8Array
+      messageHashBinary = ethers.utils.arrayify(messageHash);
+      // step 3
+      // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
+      signature = await addr1.signMessage(messageHashBinary);
+      await expect(
+        addr1Connect.pay(tokenId, amount, nonce, signature)
+      ).to.be.revertedWith("Used nonce");
+    });
+
+    it("Should pay success with LeftToken event", async function() {
+      const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      // Transfer 100 tokens from owner to addr1.
+      // Check balances.
+      await expect(hardhatToken.safeTransferFrom(owner.address, addr1.address, tokenId, 100, ethers.utils.formatBytes32String("event")))
+        .to.emit(hardhatToken, "TransferSingle")
+        .withArgs(owner.address, owner.address, addr1.address, tokenId, 100);
+      const finalOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
+      const addr1Balance = await hardhatToken.balanceOf(addr1.address, tokenId);
+      expect(addr1Balance).to.equal(100);
+      const amount = 30;
+      const nonce = new Date().valueOf();
+      // https://github.com/ethers-io/ethers.js/issues/468
+      // step 1
+      // 66 byte string, which represents 32 bytes of data
+      const messageHash = ethers.utils.solidityKeccak256(
+        ["address", "address", "uint256", "uint256", "uint256"],
+        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+      );
+      // step 2
+      // 32 bytes of data in Uint8Array
+      let messageHashBinary = ethers.utils.arrayify(messageHash);
+      const addr1Connect = await hardhatToken.connect(addr1);
+      // step 3
+      // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
+      const signature = await addr1.signMessage(messageHashBinary);
+      console.log("origin   ", addr1.address);
+      console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
+      expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
+      await expect(
+        addr1Connect.pay(tokenId, amount, nonce, signature)
+      ).to.emit(hardhatToken, "TransferSingle")
+        .withArgs(addr1.address, addr1.address, owner.address, tokenId, 20)
+        .to.emit(hardhatToken, "LeftToken")
+        .withArgs(addr1.address, tokenId, 10)
     });
   });
 });
