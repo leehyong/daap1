@@ -3,6 +3,7 @@ import contractAddress from "./contracts/contract-address.json";
 import { ethers } from "ethers";
 import state from "./store";
 
+
 export const PROVIDER = new ethers.providers.Web3Provider(window.ethereum);
 export const TOKEN_CONTRACT = new ethers.Contract(
   contractAddress.Token,

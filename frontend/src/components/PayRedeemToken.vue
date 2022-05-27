@@ -248,6 +248,7 @@ export default {
       let signer = PROVIDER.getSigner(this.payRecords[0].account);
       const addrContract = TOKEN_CONTRACT.connect(signer);
       console.log("signer", signer);
+      const signerAddr = await signer.getAddress();
       // const addrContract = signer.connect(PROVIDER);
       let _signature;
       let tx;
@@ -268,13 +269,12 @@ export default {
       } else {
         // 单个支付
         const record = this.payRecords[0];
-        _signature = await signatureOne(
-          signer, addrContract.address, parseInt(record.tokenId, 10),
+        const hash = await signatureOne(
+          signerAddr, addrContract.address, parseInt(record.tokenId, 10),
           nonce, parseInt(record.payAmount, 10));
+        _signature = await signer.signMessage(hash);
         console.log("_signature", _signature);
-
         tx = await addrContract.pay(parseInt(record.tokenId, 10), parseInt(record.payAmount, 10), nonce, _signature);
-        console.log("_signature", _signature);
       }
       console.log("confirmPay", tx);
     },

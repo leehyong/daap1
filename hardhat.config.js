@@ -30,10 +30,10 @@ module.exports = {
       // Mumbai testnet
       url: process.env.MUMBAI_URL,
       accounts: [
-        process.env.METAMASK_PRIVATE_OWNER,
-        process.env.METAMASK_PRIVATE_ADDR1,
-        process.env.METAMASK_PRIVATE_ADDR2,
-        process.env.METAMASK_PRIVATE_ADDR3
+        process.env.PRIVATE_OWNER,
+        process.env.PRIVATE_ADDR1,
+        process.env.PRIVATE_ADDR2,
+        process.env.PRIVATE_ADDR3
       ],
       chainId: 80001
     }

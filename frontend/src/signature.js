@@ -1,11 +1,11 @@
 import { ethers } from "ethers";
 
-export async function signatureOne(signer, contractAddress, tokenId, nonce, amount) {
+export async function signatureOne(signerAddress, contractAddress, tokenId, nonce, amount) {
   // https://github.com/ethers-io/ethers.js/issues/468
   // step 1
   // 66 byte string, which represents 32 bytes of data
   // 单次交易签名
-  const signerAddress = await signer.getAddress();
+  // const signerAddress = await signer.getAddress();
 
   const messageHash = ethers.utils.solidityKeccak256(
     ["address", "address", "uint256", "uint256", "uint256"],
@@ -16,11 +16,11 @@ export async function signatureOne(signer, contractAddress, tokenId, nonce, amou
   // 32 bytes of data in Uint8Array
   let messageHashBinary = ethers.utils.arrayify(messageHash);
   console.log('messageHashBinary', messageHashBinary)
-
-  // step 3
-  const sig =  await signer.signMessage(messageHashBinary);
-  console.log('sig', sig)
-  return sig;
+  return messageHashBinary;
+  // // step 3
+  // const sig =  await signer.signMessage(messageHashBinary);
+  // console.log('sig', sig)
+  // return sig;
 }
 
 export async function signatureBatch(signer, contractAddress, tokenIds, nonce, amounts) {
