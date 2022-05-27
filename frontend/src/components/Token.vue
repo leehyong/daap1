@@ -33,7 +33,7 @@ import { PROVIDER, TOKEN_CONTRACT } from "../contract";
 import { LoadingOutlined, DollarOutlined } from "@ant-design/icons-vue";
 import { catchEm } from "../util";
 import store from "../store";
-import {h} from 'vue';
+import { h } from "vue";
 
 export default {
   name: "Token",
@@ -78,14 +78,17 @@ export default {
         {
           title: "账户",
           dataIndex: "account",
-          customRender:({text, record}) =>{
+          customRender: ({ text, record }) => {
             let children = [text];
-            if (record.updatingBalance){
-              children.push(h(LoadingOutlined, {style:{
-                marginLeft:"10px",
-                }}))
+            if (record.updatingBalance) {
+              children.push(h(LoadingOutlined, {
+                style: {
+                  marginLeft: "10px",
+                  color: "blue"
+                }
+              }));
             }
-            return h("span", {}, children)
+            return h("span", {}, children);
           },
           maxWidth: 400
         },

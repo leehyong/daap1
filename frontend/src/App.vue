@@ -1,13 +1,16 @@
 <script>
-import Token from './components/Token.vue'
+// import Token from './components/Token.vue'
+import PayRedeemToken from './components/PayRedeemToken.vue'
 export default {
   components:{
-    Token
+    // Token,
+    PayRedeemToken
   }
 }
 </script>
 <template>
-  <Token/>
+<!--  <Token/>-->
+  <PayRedeemToken/>
 </template>
 
 <style>

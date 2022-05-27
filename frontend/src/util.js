@@ -3,3 +3,6 @@ export function catchEm(promise) {
     .catch(err => [err]);
 }
 
+export function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
