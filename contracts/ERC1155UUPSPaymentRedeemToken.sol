@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import './ERC1155UUPSPaymentToken.sol';
 
-contract ERC1155UUPSRedeemToken is ERC1155UUPSPaymentToken {
+contract ERC1155UUPSPaymentRedeemToken is ERC1155UUPSPaymentToken {
 
     struct NFTVoucher {
         uint256 tokenId; // The token id to be redeemed
@@ -10,10 +10,13 @@ contract ERC1155UUPSRedeemToken is ERC1155UUPSPaymentToken {
         bytes signature; // The typed signature generated beforehand
     }
 
+
+
     //赎回事件
     event Redeem(address indexed account, uint256 tokenId, uint256 amount);
 
-    function redeem(address redeemer, NFTVoucher calldata voucher, uint256 nonce) public payable{
+    // 赎回函数
+    function redeem(address redeemer, NFTVoucher calldata voucher, uint256 nonce) public payable {
         // 验证签名正确性
         require(redeemer == _msgSender(), "Invalid redeemer");
         require(isValidSignature(voucher.tokenId, voucher.minPrice, nonce, voucher.signature), "Invalid signature");
@@ -28,5 +31,6 @@ contract ERC1155UUPSRedeemToken is ERC1155UUPSPaymentToken {
         // 触发赎回事件
         emit Redeem(_msgSender(), voucher.tokenId, redeemAmount);
     }
+
 
 }

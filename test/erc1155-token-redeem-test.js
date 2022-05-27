@@ -1,6 +1,6 @@
 // We import Chai to use its asserting functions here.
 const { expect } = require("chai");
-const { ethers, upgrades, run } = require("hardhat");
+const { ethers, upgrades, run , artifacts, } = require("hardhat");
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -33,8 +33,15 @@ describe("Token contract", function() {
   beforeEach(async function() {
     // Get the ContractFactory and Signers here.
     await run("compile");
-    Token = await ethers.getContractFactory("ERC1155UUPSPaymentToken");
-    RedeemToken = await ethers.getContractFactory("ERC1155UUPSRedeemToken");
+    const BatchPayLib = await ethers.getContractFactory("BatchPay");
+    const library = await BatchPayLib.deploy();
+    Token = await ethers.getContractFactory("ERC1155UUPSPaymentRedeemToken");
+    RedeemToken = await ethers.getContractFactory("ERC1155UUPSBatchPaymentRedeemToken",
+      {
+        libraries: {
+          BatchPay: library.address
+        }
+      });
 
     // Token = await ethers.getContractFactory("ERC1155UUPSToken");
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
@@ -42,7 +49,8 @@ describe("Token contract", function() {
     // for it to be deployed(), which happens once its transaction has been
     // mined.
     let oldToken = await upgrades.deployProxy(Token, { kind: "uups" });
-    hardhatToken = await upgrades.upgradeProxy(oldToken.address, RedeemToken);
+    hardhatToken = await upgrades.upgradeProxy(oldToken.address, RedeemToken,
+      {unsafeAllow:["external-library-linking"]});
     console.log("proxy address", hardhatToken.address);
   });
 
@@ -189,7 +197,7 @@ describe("Token contract", function() {
       ).to.be.revertedWith("Used nonce");
     });
 
-    it("Should pay success with LeftToken event", async function() {
+    it("Should pay success with LeftToken event & redeem success", async function() {
       const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
       // Transfer 100 tokens from owner to addr1.
       // Check balances.
@@ -251,6 +259,66 @@ describe("Token contract", function() {
         addr1Connect.redeem(addr1.address, { tokenId, minPrice, signature }, nonce)
       ).to.emit(hardhatToken, "Redeem")
         .withArgs(addr1.address, tokenId, 10 - minPrice);
+    });
+
+
+    it("Should batchPay success", async function() {
+      const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
+      // Transfer 100 tokens from owner to addr1.
+      // Check balances.
+      async function trasferMany() {
+        let ts = [
+          { addr: addr1, tid: 1 },
+          { addr: addr1, tid: 2 },
+          { addr: addr1, tid: 3 }
+        ];
+        for (let item of ts) {
+          await expect(hardhatToken.safeTransferFrom(
+            owner.address, item.addr.address, item.tid, 100, ethers.utils.formatBytes32String("" + item.tid)))
+            .to.emit(hardhatToken, "TransferSingle")
+            .withArgs(owner.address, owner.address, item.addr.address, item.tid, 100);
+          const finalOwnerBalance = await hardhatToken.balanceOf(owner.address, item.tid);
+          expect(finalOwnerBalance).to.equal(initialOwnerBalance.sub(100));
+          const addr1Balance = await hardhatToken.balanceOf(item.addr.address, item.tid);
+          expect(addr1Balance).to.equal(100);
+        }
+      }
+
+      await trasferMany();
+
+      const amount = 30;
+      let nonce = new Date().valueOf();
+      // https://github.com/ethers-io/ethers.js/issues/468
+      // step 1
+      const tokenIds = [1, 2, 3];
+      const amounts = [amount, amount, amount];
+      let types = ["address", "address", "uint256"];
+      let values = [addr1.address, hardhatToken.address, nonce];
+
+      for (let i = 0; i < tokenIds.length; ++i) {
+        types.push("uint256", "uint256");
+        values.push(tokenIds[i], amounts[i]);
+      }
+      // 66 byte string, which represents 32 bytes of data
+      // 32 bytes of data in Uint8Array
+      let messageHash = ethers.utils.arrayify(ethers.utils.solidityKeccak256(types, values));
+      let signature = await addr1.signMessage(messageHash);
+      console.log("origin   ", addr1.address);
+      console.log("recovered", ethers.utils.verifyMessage(messageHash, signature));
+      await expect(ethers.utils.verifyMessage(messageHash, signature) === addr1.address);
+      const addr1Connect = await hardhatToken.connect(addr1);
+      await expect(
+        addr1Connect.batchPay({
+          tokenIds,
+          amounts,
+          signature,
+          nonce
+        })
+      ).to.emit(hardhatToken, "TransferBatch")
+        .withArgs(addr1.address, addr1.address, owner.address, [1, 2, 3], [amount, amount, amount]);
+      // .emit(hardhatToken, "LeftTokenBatch")
+      // .withArgs(addr1.address, [1, 2, 3], [amount - 20, amount - 20, amount - 20]);
+
     });
   });
 });
