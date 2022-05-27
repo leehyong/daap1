@@ -50,7 +50,7 @@ function saveFrontendFiles(token) {
     JSON.stringify({ Token: token.address }, undefined, 2)
   );
 
-  const TokenArtifact = artifacts.readArtifactSync("Token");
+  const TokenArtifact = artifacts.readArtifactSync("ERC1155UUPSBatchPaymentRedeemToken");
 
   fs.writeFileSync(
     contractsDir + "/Token.json",

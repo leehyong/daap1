@@ -40,7 +40,7 @@ function saveFrontendFiles(token) {
     JSON.stringify({ Token: token.address }, undefined, 2)
   );
 
-  const TokenArtifact = artifacts.readArtifactSync("Token");
+  const TokenArtifact = artifacts.readArtifactSync("UupsToken");
 
   fs.writeFileSync(
     contractsDir + "/Token.json",
