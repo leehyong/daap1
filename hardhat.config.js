@@ -1,11 +1,11 @@
 require("dotenv").config();
 
-require('@nomiclabs/hardhat-ethers');
+require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
-require('@openzeppelin/hardhat-upgrades');
+require("@openzeppelin/hardhat-upgrades");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -29,7 +29,12 @@ module.exports = {
     mumbai: {
       // Mumbai testnet
       url: process.env.MUMBAI_URL,
-      accounts:[process.env.METAMASK_PRIVATE_KEY],
+      accounts: [
+        process.env.METAMASK_PRIVATE_OWNER,
+        process.env.METAMASK_PRIVATE_ADDR1,
+        process.env.METAMASK_PRIVATE_ADDR2,
+        process.env.METAMASK_PRIVATE_ADDR3
+      ],
       chainId: 80001
     }
   },

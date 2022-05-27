@@ -197,6 +197,28 @@ describe("Token contract", function() {
       ).to.be.revertedWith("Used nonce");
     });
 
+    async function signatureOne(signer, contractAddress, tokenId, nonce, amount) {
+      // https://github.com/ethers-io/ethers.js/issues/468
+      // step 1
+      // 66 byte string, which represents 32 bytes of data
+      // 单次交易签名
+      const signerAddress = await signer.getAddress();
+
+      const messageHash = ethers.utils.solidityKeccak256(
+        ["address", "address", "uint256", "uint256", "uint256"],
+        [signerAddress, contractAddress, tokenId, nonce, amount]
+      );
+      console.log('[sssss]',[signerAddress, contractAddress, tokenId, nonce, amount])
+      // step 2
+      // 32 bytes of data in Uint8Array
+      let messageHashBinary = ethers.utils.arrayify(messageHash);
+      console.log('messageHashBinary', messageHashBinary)
+
+      // step 3
+      const sig =  await signer.signMessage(messageHashBinary);
+      console.log('sig', sig)
+      return sig;
+    }
     it("Should pay success with LeftToken event & redeem success", async function() {
       const initialOwnerBalance = await hardhatToken.balanceOf(owner.address, tokenId);
       // Transfer 100 tokens from owner to addr1.
@@ -223,9 +245,9 @@ describe("Token contract", function() {
       const addr1Connect = await hardhatToken.connect(addr1);
       // step 3
       // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
-      let signature = await addr1.signMessage(messageHashBinary);
-      console.log("origin   ", addr1.address);
-      console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
+      let signature = await signatureOne(addr1, hardhatToken.address, tokenId, nonce, amount);
+      console.log("origin249 ", addr1.address);
+      console.log("recovered ", ethers.utils.verifyMessage(messageHashBinary, signature));
       expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address);
       await expect(
         addr1Connect.pay(tokenId, amount, nonce, signature)

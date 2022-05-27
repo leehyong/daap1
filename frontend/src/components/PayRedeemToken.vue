@@ -44,7 +44,7 @@
           <a-row type="'flex" :gutter="[4,6]">
             <a-col flex="1">
               <a-tooltip>
-                <template #title v-show="record.balance == 0">账户余额大于0才能使用支付功能</template>
+                <template #title v-if="record.balance == 0">账户余额大于0才能使用支付功能</template>
                 <a-button @click="payOne(record)" :disabled="record.balance == 0" v-if="record.account !== owner">支付
                 </a-button>
               </a-tooltip>
