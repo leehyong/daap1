@@ -45,7 +45,8 @@
             <a-col flex="1">
               <a-tooltip>
                 <template #title v-show="record.balance == 0">账户余额大于0才能使用支付功能</template>
-                <a-button @click="payOne(record)" :disabled="record.balance == 0" v-if="record.account !== owner">支付</a-button>
+                <a-button @click="payOne(record)" :disabled="record.balance == 0" v-if="record.account !== owner">支付
+                </a-button>
               </a-tooltip>
             </a-col>
             <a-col flex="1">
@@ -67,7 +68,13 @@
           <span style="color: blue;text-overflow: ellipsis" :title="record.account">{{ record.account }}</span>
         </a-col>
         <a-col :span="5">
-          <a-input-number v-model:value="record.payAmount" :min="1" :max="1000" placehodler="支付数量" />
+          <a-tooltip :color="'blue'" :trigger="'focus'">
+            <template #title>不能超过余额<span style="color: black;font-size: 24px;padding:0 6px">{{ record.balance }}</span>{{
+                tokens[record.tokenId]
+              }}
+            </template>
+            <a-input-number v-model:value="record.payAmount" :min="1" :max="record.balance" placehodler="支付数量" />
+          </a-tooltip>
         </a-col>
         <a-col :span="3" style="display: flex;place-items: start">
           <span>{{ tokens[record.tokenId] }}</span>
@@ -103,7 +110,7 @@ export default {
       chainId: 0,
       owner: null,
       tokens: { 1: "Rock", 2: "Paper", 3: "Scissors" },
-      tokenId: '1',
+      tokenId: "1",
       mintAddr: null,
       accounts: [],
       minting: false,
@@ -143,7 +150,7 @@ export default {
           // owner 或者没有余额时，都不能支付
           let disabled = record.account === this.owner || record.balance < 1; // owner 不能进行批量支付
           if (!disabled && this.selectedFirstAccount) {
-          // 只能选择同一账户下的不同token 进行批量支付
+            // 只能选择同一账户下的不同token 进行批量支付
             disabled = this.selectedFirstAccount !== record.account;
           }
           return {
@@ -217,7 +224,7 @@ export default {
       return record.account + "::" + record.tokenId;
     },
     payOne(record) {
-      if (record.balance < 1) return
+      if (record.balance < 1) return;
       this.payRecords.length = 0;
       record.payAmount = 1;
       record.payTokenId = 1;
@@ -230,7 +237,7 @@ export default {
     payBatch() {
       this.payRecords.length = 0;
       for (let record of this.selectedRows) {
-        if (record.balance < 1) continue
+        if (record.balance < 1) continue;
         record.payAmount = 1;
         this.payRecords.push(record);
       }
@@ -238,16 +245,20 @@ export default {
     async confirmPay() {
       if (this.payRecords.length === 0) return;
       // 不管是批量支付还是单个支付， 地址都是同一个
-      const signer = PROVIDER.getSigner(this.payRecords[0].account);
+      let signer = PROVIDER.getSigner(this.payRecords[0].account);
       const addrContract = TOKEN_CONTRACT.connect(signer);
+      console.log("signer", signer);
+      // const addrContract = signer.connect(PROVIDER);
       let _signature;
       let tx;
       const nonce = new Date().valueOf();
+      console.log("signerAddress", await signer.getAddress(), addrContract.address);
       if (this.payRecords.length > 1) {
         // 批量支付
-        let ids = this.payRecords.map(item => item.tokenId);
-        let amounts = this.payRecords.map(item => item.payAmount);
-        _signature = signatureBatch(signer, TOKEN_CONTRACT.address, ids, nonce, amounts);
+        let ids = this.payRecords.map(item => parseInt(item.tokenId));
+        let amounts = this.payRecords.map(item => parseInt(item.payAmount, 10));
+        _signature = await signatureBatch(signer, addrContract.address, ids, nonce, amounts);
+        console.log("ids-amounts", ids, amounts);
         tx = await addrContract.batchPay({
           tokenIds: ids,
           amounts,
@@ -257,8 +268,13 @@ export default {
       } else {
         // 单个支付
         const record = this.payRecords[0];
-        _signature = signatureOne(signer, TOKEN_CONTRACT.address, record.tokenId, nonce, record.payAmount);
-        tx = await addrContract.pay(record.tokenId, record.payAmount, nonce, _signature);
+        _signature = await signatureOne(
+          signer, addrContract.address, parseInt(record.tokenId, 10),
+          nonce, parseInt(record.payAmount, 10));
+        console.log("_signature", _signature);
+
+        tx = await addrContract.pay(parseInt(record.tokenId, 10), parseInt(record.payAmount, 10), nonce, _signature);
+        console.log("_signature", _signature);
       }
       console.log("confirmPay", tx);
     },
@@ -293,16 +309,16 @@ export default {
         this.$message.error("错误， 不能找到signer");
         return;
       }
-      console.log('signer', signer)
+      console.log("signer", signer);
       let tx;
       try {
         this.minting = true;
         let signerAddress = await signer.getAddress();
         const daiWithSigner = await TOKEN_CONTRACT.connect(signer);
-        console.log('mint', signerAddress,
+        console.log("mint", signerAddress,
           this.mintAddr,
           this.amount,
-          this.tokenId,)
+          this.tokenId);
         tx = await daiWithSigner.safeTransferFrom(
           signerAddress,
           this.mintAddr,

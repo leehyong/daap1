@@ -5,15 +5,22 @@ export async function signatureOne(signer, contractAddress, tokenId, nonce, amou
   // step 1
   // 66 byte string, which represents 32 bytes of data
   // 单次交易签名
+  const signerAddress = await signer.getAddress();
+
   const messageHash = ethers.utils.solidityKeccak256(
     ["address", "address", "uint256", "uint256", "uint256"],
-    [signer.address, contractAddress, tokenId, nonce, amount]
+    [signerAddress, contractAddress, tokenId, nonce, amount]
   );
+  console.log('[sssss]',[signerAddress, contractAddress, tokenId, nonce, amount])
   // step 2
   // 32 bytes of data in Uint8Array
   let messageHashBinary = ethers.utils.arrayify(messageHash);
+  console.log('messageHashBinary', messageHashBinary)
+
   // step 3
-  return await signer.signMessage(messageHashBinary);
+  const sig =  await signer.signMessage(messageHashBinary);
+  console.log('sig', sig)
+  return sig;
 }
 
 export async function signatureBatch(signer, contractAddress, tokenIds, nonce, amounts) {
@@ -22,7 +29,9 @@ export async function signatureBatch(signer, contractAddress, tokenIds, nonce, a
   // 多次交易签名
 
   let types = ["address", "address", "uint256"];
-  let values = [signer.address, contractAddress, nonce];
+  const signerAddress = await signer.getAddress();
+  let values = [signerAddress, contractAddress, nonce];
+
   for (let i = 0; i < tokenIds.length; ++i) {
     types.push("uint256", "uint256");
     values.push(tokenIds[i], amounts[i]);
