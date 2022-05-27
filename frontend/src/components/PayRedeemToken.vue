@@ -87,7 +87,7 @@
 </template>
 
 <script>
-import { PROVIDER, TOKEN_CONTRACT } from "../batch-contract";
+import { PROVIDER, TOKEN_CONTRACT, ACCOUNTS_PRIVATE_KEYS } from "../batch-contract";
 import { LoadingOutlined, DollarOutlined, UserOutlined } from "@ant-design/icons-vue";
 import { Table } from "ant-design-vue";
 import { signatureOne, signatureBatch } from "../signature";
@@ -95,6 +95,8 @@ import { catchEm } from "../util";
 import store from "../store";
 import { h } from "vue";
 import { ethers } from "ethers";
+import { personalSign } from "@metamask/eth-sig-util";
+import { isHexString } from "ethereumjs-util";
 
 export default {
   name: "Token",
@@ -269,10 +271,27 @@ export default {
       } else {
         // 单个支付
         const record = this.payRecords[0];
+        let pk = ACCOUNTS_PRIVATE_KEYS[signerAddr.toLowerCase()];
+        if (!pk.startsWith("0x")) pk = '0x' + pk;
+
+        console.log('pkey',pk, typeof pk === 'string' && !isHexString(pk))
+
         const hash = await signatureOne(
           signerAddr, addrContract.address, parseInt(record.tokenId, 10),
           nonce, parseInt(record.payAmount, 10));
+        // _signature =  personalSign({
+        //   data: hash,
+        //   privateKey:  pk
+        // });
         _signature = await signer.signMessage(hash);
+        // console.log("signerAddr.toLowerCase()", signerAddr.toLowerCase());
+        // _signature = await this.ethereum.sendAsync({
+        //   method:"personal_sign",
+        //   params:[ ethers.utils.hexlify(hash), signerAddr.toLowerCase(),pk ],
+        //   callback:(error, resp) =>{
+        //     console.log(error, resp)
+        //   }
+        // });
         console.log("_signature", _signature);
         tx = await addrContract.pay(parseInt(record.tokenId, 10), parseInt(record.payAmount, 10), nonce, _signature);
       }
@@ -352,6 +371,7 @@ export default {
               "eth_accounts": {}
             }
           ]
+          // method: "eth_requestAccounts",
         }));
       if (err2) {
         console.error(err2);

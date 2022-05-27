@@ -11,6 +11,8 @@ export async function signatureOne(signerAddress, contractAddress, tokenId, nonc
     ["address", "address", "uint256", "uint256", "uint256"],
     [signerAddress, contractAddress, tokenId, nonce, amount]
   );
+  console.log('is1',ethers.utils.isAddress(signerAddress))
+  console.log('is2',ethers.utils.isAddress(contractAddress))
   console.log('[sssss]',[signerAddress, contractAddress, tokenId, nonce, amount])
   // step 2
   // 32 bytes of data in Uint8Array

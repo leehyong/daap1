@@ -1,9 +1,11 @@
 import TokenArtifact from "./contracts/Token.json";
+import Accounts from "./accounts.json";
 import contractAddress from "./contracts/contract-address.json";
 import { ethers } from "ethers";
 import state from "./store";
 
-
+// key： 以太坊地址(小写)， value： 私钥
+export const ACCOUNTS_PRIVATE_KEYS = Accounts;
 export const PROVIDER = new ethers.providers.Web3Provider(window.ethereum);
 export const TOKEN_CONTRACT = new ethers.Contract(
   contractAddress.Token,
