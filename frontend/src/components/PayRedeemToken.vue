@@ -13,8 +13,7 @@
         <a-input-number v-model:value="amount" :min="1" :max="1000" placehodler="铸币数量" />
       </a-col>
       <a-col :span="2">
-        <a-select v-model:value="tokenId" mode="tags" style="width: 100%">
-          <template #tagRender>{{ tokens[tokenId] }}</template>
+        <a-select v-model:value="tokenId" style="width: 100%">
           <a-select-option v-for="(name, _tokenId) in tokens" :key="_tokenId">
             {{ name }}
           </a-select-option>
@@ -104,7 +103,7 @@ export default {
       chainId: 0,
       owner: null,
       tokens: { 1: "Rock", 2: "Paper", 3: "Scissors" },
-      tokenId: 1,
+      tokenId: '1',
       mintAddr: null,
       accounts: [],
       minting: false,
