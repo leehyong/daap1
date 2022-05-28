@@ -94,7 +94,7 @@
 </template>
 
 <script>
-import { PROVIDER, TOKEN_CONTRACT, ACCOUNTS_PRIVATE_KEYS } from "../batch-contract";
+import { PROVIDER, TOKEN_CONTRACT } from "../batch-contract";
 import { LoadingOutlined, DollarOutlined, UserOutlined } from "@ant-design/icons-vue";
 import { Table } from "ant-design-vue";
 import { signatureOne, signatureBatch } from "../signature";
@@ -102,10 +102,6 @@ import { catchEm } from "../util";
 import store from "../store";
 import { h } from "vue";
 import { ethers } from "ethers";
-import { personalSign } from "@metamask/eth-sig-util";
-import { isHexString } from "ethereumjs-util";
-import { toUtf8Bytes } from "@ethersproject/strings";
-import { hexlify } from "@ethersproject/bytes";
 
 export default {
   name: "Token",
