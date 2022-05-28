@@ -33,7 +33,7 @@
       <a-col :span="4">
         <a-tooltip>
           <template #title>从onwer账户批量支付不同的token给同一账户"</template>
-          <a-button :disabled="selectedRows.length === 0" @click="payBatch">批量支付</a-button>
+          <a-button :disabled="selectedRowKeys.length === 0" @click="payBatch">批量支付</a-button>
         </a-tooltip>
       </a-col>
     </a-row>
@@ -199,6 +199,16 @@ export default {
         {
           title: "账户",
           dataIndex: "account",
+          customCell: (record) => {
+            return {
+              onClick: () => {
+                this.selectRow(record);
+              },
+              style: {
+                cursor: "pointer"
+              }
+            };
+          },
           customRender: ({ text, record }) => {
             let children = [text];
             if (record.account === this.owner) {
@@ -214,10 +224,15 @@ export default {
                 style: {
                   marginLeft: "10px",
                   color: "blue"
+
                 }
               }));
             }
-            return h("span", {}, children);
+            return h("span", {
+              style: {
+                cursor: "pointer"
+              }
+            }, children);
           },
           maxWidth: 400
         },
@@ -225,6 +240,16 @@ export default {
           title: "余额",
           dataIndex: "balance",
           maxWidth: 100,
+          customCell: (record) => {
+            return {
+              onClick: () => {
+                this.selectRow(record);
+              },
+              style: {
+                cursor: "pointer"
+              }
+            };
+          },
           customRender: ({ text, record }) => {
             let children = [h("span", {
               style: {
@@ -248,6 +273,14 @@ export default {
   methods: {
     rowKey(record) {
       return record.account + "::" + record.tokenId;
+    },
+    selectRow(record) {
+      const idx = this.selectedRowKeys.indexOf(this.rowKey(record));
+      if (idx === -1) {
+        this.selectedRowKeys.push(this.rowKey(record));
+      } else {
+        this.selectedRowKeys.splice(idx, 1);
+      }
     },
     payOne(record) {
       if (record.balance < 1) return;
@@ -282,7 +315,9 @@ export default {
     },
     payBatch() {
       this.payRecords.length = 0;
-      for (let record of this.selectedRows) {
+      for (let record of this.dataSource) {
+        const rk = this.rowKey(record)
+        if (this.selectedRowKeys.indexOf(rk) === -1) continue
         if (record.balance < 1) continue;
         record.payAmount = this.assetValue;
         this.payRecords.push(record);
@@ -372,15 +407,14 @@ export default {
       console.log("confirmPay", tx);
     },
     cancelPay() {
-      if (this.confirmingPay){
-        this.$message.warning("正在支付中，不能取消...")
-        return
+      if (this.confirmingPay) {
+        this.$message.warning("正在支付中，不能取消...");
+        return;
       }
       this.payRecords.length = 0;
     },
     onSelectChange(selectedRowKeys, selectedRows) {
       this.selectedRowKeys = selectedRowKeys;
-      this.selectedRows = selectedRows;
       if (this.selectedRows?.length) {
         this.selectedFirstAccount = this.selectedRows[0].account;
       } else {
@@ -520,10 +554,10 @@ export default {
           console.log("update balance", ac.account);
         }
       }
-      store.commit('clearAction', 'transfer')
+      store.commit("clearAction", "transfer");
     },
     async "state.transferBatch"(val) {
-      if (!val|| val.data === false) return;
+      if (!val || val.data === false) return;
       for (let ac of this.dataSource) {
         if (ac.account === val.from || ac.account === val.to) {
           for (let tid of val.tokenIds) {
@@ -533,7 +567,7 @@ export default {
           }
         }
       }
-      store.commit('clearAction','transferBatch');
+      store.commit("clearAction", "transferBatch");
     },
 
     async "state.leftToken"(val) {
@@ -542,14 +576,14 @@ export default {
         if (ac.account == val.account && val.tokenId == ac.tokenId) {
           ac.canRedeem = val.amount > this.minPrices[val.tokenId];
           ac.updatingBalance = false;
-          if (ac.canRedeem){
-            let msg = `账户${ac.account}有剩余 ${val.amount} ${this.tokens[val.tokenId]}可以赎回!`
-            console.log(msg)
+          if (ac.canRedeem) {
+            let msg = `账户${ac.account}有剩余 ${val.amount} ${this.tokens[val.tokenId]}可以赎回!`;
+            console.log(msg);
             this.$message.success(msg, 5);
           }
         }
       }
-      store.commit('clearAction','leftToken');
+      store.commit("clearAction", "leftToken");
     },
 
     async "state.redeemToken"(val) {
@@ -564,7 +598,7 @@ export default {
           this.$message.success(msg, 5);
         }
       }
-      store.commit('clearAction','redeemToken');
+      store.commit("clearAction", "redeemToken");
     }
   }
 
