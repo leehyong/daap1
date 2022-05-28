@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-
+import store from "./store"
 import { Button, message,
   Row, Col, Select,
   SelectOption, Table, InputNumber,
@@ -19,5 +19,6 @@ app.use(SelectOption);
 app.use(InputNumber);
 app.use(Popconfirm);
 app.use(Tooltip);
+app.use(store);
 app.config.globalProperties.$message = message;
 app.mount('#app')

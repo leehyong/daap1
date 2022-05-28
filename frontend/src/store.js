@@ -1,4 +1,4 @@
-import { reactive } from "vue";
+import { createStore } from "vuex";
 
 function defaultTransfer() {
   return Object.assign({}, {
@@ -38,68 +38,63 @@ function defaultRedeemToken() {
   });
 }
 
-const states = reactive({
-  transfer: defaultTransfer(),
-  transferBatch: defaultTransferBatch(),
-  leftToken: defaultLeftToken(),
-  redeemToken: defaultRedeemToken()
-});
+const debug = true;
+export default createStore({
+  state() {
+    return {
+      transfer: defaultTransfer(),
+      transferBatch: defaultTransferBatch(),
+      leftToken: defaultLeftToken(),
+      redeemToken: defaultRedeemToken()
+    };
+  },
+  mutations: {
+    setAction(state, options) {
+      if (debug) {
+        console.log("setMessageAction triggered with", options, state);
+      }
+      const { prop, data } = options;
+      if (state.hasOwnProperty(prop))
+      switch (prop) {
+        case "transfer":
+          state.transfer = Object.assign({}, defaultTransfer(), data);
+          break;
+        case "transferBatch":
+          state.transferBatch = Object.assign({}, defaultTransferBatch(), data);
+          break;
+        case "leftToken":
+          state.leftToken = Object.assign({}, defaultLeftToken(), data);
+          break;
+        case "redeemToken":
+          state.redeemToken = Object.assign({}, defaultRedeemToken(), data);
+          break;
+      }
+    },
 
-export default {
-  debug: true,
-  state: states,
-
-  setAction(options) {
-    if (this.debug) {
-      console.log("setMessageAction triggered with", options);
-    }
-    if (!options) return;
-    if (!this.state)this.state = states;
-    const { transfer, transferBatch, leftToken, redeemToken } = options;
-    for (let prop in this.state) {
-      if (this.state.hasOwnProperty(prop)) {
-        switch (prop) {
-          case "transfer":
-            this.state[prop] = transfer;
-            break;
-          case "transferBatch":
-            this.state[prop] = transferBatch;
-            break;
-          case "leftToken":
-            this.state[prop] = leftToken;
-            break;
-          case "redeemToken":
-            this.state[prop] = redeemToken;
-            break;
-        }
+    clearAction(state, prop) {
+      if (debug) {
+        console.log("clearMessageAction triggered", prop, state);
+      }
+      switch (prop) {
+        case "transfer":
+          state.transfer = defaultTransfer();
+          break;
+        case "transferBatch":
+          state.transferBatch = defaultTransferBatch();
+          break;
+        case "leftToken":
+          state.leftToken = defaultLeftToken();
+          break;
+        case "redeemToken":
+          state.redeemToken = defaultRedeemToken();
+          break;
+        case "all":
+          state.transfer = defaultTransfer();
+          state.transferBatch = defaultTransferBatch();
+          state.leftToken = defaultLeftToken();
+          state.redeemToken = defaultRedeemToken();
+          break;
       }
     }
-  },
-
-  clearAction(options) {
-    if (this.debug) {
-      console.log("clearMessageAction triggered", options);
-    }
-    if (!options) return;
-    const { all, transfer, transferBatch, leftToken, redeemToken } = options;
-    if (!!all) {
-      this.state.transfer = defaultTransfer();
-      this.state.transferBatch = defaultTransferBatch();
-      this.state.leftToken = defaultLeftToken();
-      this.state.redeemToken = defaultRedeemToken();
-
-    } else {
-      if (transfer)
-        this.state.transfer = defaultTransfer();
-
-      if (transferBatch)
-        this.state.transferBatch = defaultTransferBatch();
-
-      if (leftToken)
-        this.state.leftToken = defaultLeftToken();
-
-      if (redeemToken)
-        this.state.redeemToken = defaultRedeemToken();
-    }
   }
-};
+});

@@ -10,7 +10,8 @@
   "dependencies": {
     "ant-design-vue": "^3.2.4",
     "ethers": "^5.6.7",
-    "vue": "^3.2.33"
+    "vue": "^3.2.33",
+    "vuex": "^4.0.2"
   },
   "devDependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.1.1",

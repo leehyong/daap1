@@ -372,6 +372,10 @@ export default {
       console.log("confirmPay", tx);
     },
     cancelPay() {
+      if (this.confirmingPay){
+        this.$message.warning("正在支付中，不能取消...")
+        return
+      }
       this.payRecords.length = 0;
     },
     onSelectChange(selectedRowKeys, selectedRows) {
@@ -516,7 +520,7 @@ export default {
           console.log("update balance", ac.account);
         }
       }
-      store.clearAction({ transfer: true });
+      store.commit('clearAction', 'transfer')
     },
     async "state.transferBatch"(val) {
       if (!val|| val.data === false) return;
@@ -529,21 +533,23 @@ export default {
           }
         }
       }
-      store.clearAction({ transferBatch: true });
+      store.commit('clearAction','transferBatch');
     },
 
     async "state.leftToken"(val) {
       if (!val || val.data === false) return;
       for (let ac of this.dataSource) {
         if (ac.account == val.account && val.tokenId == ac.tokenId) {
-          ac.canRedeem = true;
+          ac.canRedeem = val.amount > this.minPrices[val.tokenId];
           ac.updatingBalance = false;
-          let msg = `账户${ac.account}有剩余 ${val.amount} ${this.tokens[val.tokenId]}可以赎回!`
-          console.log(msg)
-          this.$message.info(msg);
+          if (ac.canRedeem){
+            let msg = `账户${ac.account}有剩余 ${val.amount} ${this.tokens[val.tokenId]}可以赎回!`
+            console.log(msg)
+            this.$message.success(msg, 5);
+          }
         }
       }
-      store.clearAction({ leftToken: true });
+      store.commit('clearAction','leftToken');
     },
 
     async "state.redeemToken"(val) {
@@ -555,10 +561,10 @@ export default {
           let name = this.tokens[val.tokenId];
           let msg = `账户${ac.account}已经赎回 ${val.amount} ${name}， 手续费${this.minPrices[val.tokenId]}${name}可以赎回!`;
           console.log(msg);
-          this.$message.info(msg);
+          this.$message.success(msg, 5);
         }
       }
-      store.clearAction({ leftToken: true });
+      store.commit('clearAction','redeemToken');
     }
   }
 
