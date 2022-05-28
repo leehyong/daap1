@@ -50,7 +50,15 @@
               </a-tooltip>
             </a-col>
             <a-col flex="1">
-              <a-button @click="redeemOne(record)" v-if="record.account == owner">赎回</a-button>
+              <a-tooltip>
+                <template #title>支付后有剩余且剩余量不低于<span class="txt-num"
+                                                    style="color: red">{{
+                    minPrices[record.tokenId]
+                  }}</span>{{ tokens[record.tokenId] }}，才能进行赎回
+                </template>
+                <a-button @click="redeemOne(record)" v-if="record.account == owner" :disabled="!record.canRedeem">赎回
+                </a-button>
+              </a-tooltip>
             </a-col>
           </a-row>
         </template>
@@ -128,6 +136,11 @@ export default {
       minting: false,
       tokenContract: null,
       dataSource: [],
+      minPrices: {
+        1: 4,
+        2: 5,
+        3: 10
+      },
       amount: 10,
       state: store.state,
       selectedRowKeys: [],
@@ -244,8 +257,28 @@ export default {
       console.log(record);
       this.payRecords.push(record);
     },
-    redeemOne(record) {
-      console.log("redeemOne");
+    async redeemOne(record) {
+      if (!record.canRedeem) return;
+      try {
+        const signer = await this.getContractSigner();
+        if (!signer) return;
+        const addrContract = TOKEN_CONTRACT.connect(signer);
+        const nonce = new Date().valueOf();
+        const minPrice = this.minPrices[record.tokenId];
+        const _sig = await signatureOne(
+          signer, record.account, addrContract.address,
+          record.tokenId, nonce, minPrice);
+        console.log("signature", _sig);
+        let tx = await addrContract.redeem(record.account, {
+          tokenId: record.tokenId,
+          minPrice,
+          signature: _sig
+        }, nonce);
+        this.updateAccountLoading("", record.account, [record.tokenId]);
+        console.log("redeem tx", tx);
+      } catch (e) {
+        console.error(e);
+      }
     },
     payBatch() {
       this.payRecords.length = 0;
@@ -255,33 +288,39 @@ export default {
         this.payRecords.push(record);
       }
     },
-    async confirmPay() {
-      if (this.payRecords.length === 0) return;
-      else if (this.confirmingPay) {
-        this.$message.warn('正在支付中，请稍后再试')
-        return
-      }
-      this.confirmingPay = true;
-      // 不管是批量支付还是单个支付， 接收方地址都是同一个
-      let tx;
+    async getContractSigner() {
       try {
-        let sendFrom = await ethereum.request({
+        let sendFrom = await this.ethereum.request({
           method: "eth_requestAccounts"
         });
         sendFrom = sendFrom && sendFrom[0].toLowerCase();
         if (!sendFrom) {
           console.log("no sendFrom");
           this.payRecords.length = 0;
-          return;
+          return null;
         }
+        return PROVIDER.getSigner(sendFrom);
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
+    },
+    async confirmPay() {
+      if (this.payRecords?.length === 0) return;
+      else if (this.confirmingPay) {
+        this.$message.warn("正在支付中，请稍后再试");
+        return;
+      }
+      this.confirmingPay = true;
+      // 不管是批量支付还是单个支付， 接收方地址都是同一个
+      let tx;
+      try {
         let to = this.payToAddr;
-        let signer = PROVIDER.getSigner(sendFrom);
+        const signer = await this.getContractSigner();
+        if (!signer) return;
         const addrContract = TOKEN_CONTRACT.connect(signer);
-        console.log("signer", signer);
-        // const addrContract = signer.connect(PROVIDER);
         let _signature;
         const nonce = new Date().valueOf();
-        console.log("signerAddress", await signer.getAddress(), addrContract.address);
         let amounts = [];
         let ids = [];
         for (let item of this.payRecords) {
@@ -310,11 +349,11 @@ export default {
             signature: _signature,
             nonce
           });
+          this.updateAccountLoading(await signer.getAddress(), to, ids);
         } else {
           // 单个支付
           const tokenId = ids[0];
           const amount = amounts[0];
-          console.log("to from", to, sendFrom);
           _signature = await signatureOne(
             signer,
             to,
@@ -323,6 +362,7 @@ export default {
             nonce,
             amount);
           tx = await addrContract.pay(to, tokenId, amount, nonce, _signature);
+          this.updateAccountLoading(await signer.getAddress(), to, [tokenId]);
         }
       } catch (e) {
         console.error(e);
@@ -399,7 +439,7 @@ export default {
         return;
       }
       this.minting = false;
-      this.updateAccountLoading(this.owner, this.mintAddr, this.tokenId);
+      this.updateAccountLoading(this.owner, this.mintAddr, [this.tokenId]);
     },
 
     async getChainId() {
@@ -432,23 +472,24 @@ export default {
       return balance.toString();
     },
 
-    updateAccountLoading(_from, _to, tokenId) {
+    updateAccountLoading(_from, _to, tokenIds) {
+      _from = _from.toLowerCase();
+      _to = _to.toLowerCase();
       for (let ac of this.dataSource) {
-        if (tokenId == ac.tokenId && (ac.account === _from || ac.account === _to)) {
-          ac.updatingBalance = true;
+        for (let tid of tokenIds) {
+          if (tid == ac.tokenId && (ac.account === _from || ac.account === _to)) {
+            ac.updatingBalance = true;
+          }
         }
       }
     }
   },
   watch: {
     async accounts(val) {
-      if (!val || val.length === 0) return;
+      if (!val || val?.length === 0) return;
       if (!this.tokenContract) {
         await this.getTokenContract();
       }
-      // while (!this.tokenContract) {
-      //   await sleep(100);
-      // }
       this.dataSource.length = 0;
       for (const idx in this.accounts || {}) {
         const account = this.accounts[idx];
@@ -457,6 +498,7 @@ export default {
           this.dataSource.push({
             account,
             tokenId,
+            canRedeem: false,
             updatingBalance: false,
             balance: await this.getAccountBalance(account, tokenId)
           });
@@ -466,8 +508,7 @@ export default {
     },
 
     async "state.transfer"(val) {
-      console.log("state", val);
-      if (!val || Object.keys(val).length === 0 || val.data === false) return;
+      if (!val || val.data === false) return;
       for (let ac of this.dataSource) {
         if (ac.tokenId == val.tokenId && (ac.account === val.from || ac.account === val.to)) {
           ac.balance = await this.getAccountBalance(ac.account, val.tokenId);
@@ -475,7 +516,49 @@ export default {
           console.log("update balance", ac.account);
         }
       }
-      store.clearAction();
+      store.clearAction({ transfer: true });
+    },
+    async "state.transferBatch"(val) {
+      if (!val|| val.data === false) return;
+      for (let ac of this.dataSource) {
+        if (ac.account === val.from || ac.account === val.to) {
+          for (let tid of val.tokenIds) {
+            ac.balance = await this.getAccountBalance(ac.account, val.tokenId);
+            ac.updatingBalance = false;
+            console.log("batch update balance", ac.account);
+          }
+        }
+      }
+      store.clearAction({ transferBatch: true });
+    },
+
+    async "state.leftToken"(val) {
+      if (!val || val.data === false) return;
+      for (let ac of this.dataSource) {
+        if (ac.account == val.account && val.tokenId == ac.tokenId) {
+          ac.canRedeem = true;
+          ac.updatingBalance = false;
+          let msg = `账户${ac.account}有剩余 ${val.amount} ${this.tokens[val.tokenId]}可以赎回!`
+          console.log(msg)
+          this.$message.info(msg);
+        }
+      }
+      store.clearAction({ leftToken: true });
+    },
+
+    async "state.redeemToken"(val) {
+      if (!val || val.data === false) return;
+      for (let ac of this.dataSource) {
+        if (ac.account == val.account && val.tokenId == ac.tokenId) {
+          ac.canRedeem = false;
+          ac.updatingBalance = false;
+          let name = this.tokens[val.tokenId];
+          let msg = `账户${ac.account}已经赎回 ${val.amount} ${name}， 手续费${this.minPrices[val.tokenId]}${name}可以赎回!`;
+          console.log(msg);
+          this.$message.info(msg);
+        }
+      }
+      store.clearAction({ leftToken: true });
     }
   }
 

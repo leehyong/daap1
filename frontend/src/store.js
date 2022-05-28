@@ -38,37 +38,49 @@ function defaultRedeemToken() {
   });
 }
 
+const states = reactive({
+  transfer: defaultTransfer(),
+  transferBatch: defaultTransferBatch(),
+  leftToken: defaultLeftToken(),
+  redeemToken: defaultRedeemToken()
+});
+
 export default {
-  debug: false,
-  state: reactive({
-    transfer: defaultTransfer(),
-    transferBatch: defaultTransferBatch(),
-    leftToken: defaultLeftToken(),
-    redeemToken: defaultRedeemToken()
-  }),
+  debug: true,
+  state: states,
 
   setAction(options) {
     if (this.debug) {
-      console.log("setMessageAction triggered with", newValue);
+      console.log("setMessageAction triggered with", options);
     }
-    if (!options || Object.keys(options).length === 0) return
+    if (!options) return;
+    if (!this.state)this.state = states;
     const { transfer, transferBatch, leftToken, redeemToken } = options;
-    let _state = this.state;
-    const setProp = (prop) => {
-      const value = eval(prop);
-      if (value && Object.keys(value).length > 0) _state[prop] = value;
-    };
     for (let prop in this.state) {
-      if (this.state.hasOwnProperty(prop))
-        setProp(prop);
+      if (this.state.hasOwnProperty(prop)) {
+        switch (prop) {
+          case "transfer":
+            this.state[prop] = transfer;
+            break;
+          case "transferBatch":
+            this.state[prop] = transferBatch;
+            break;
+          case "leftToken":
+            this.state[prop] = leftToken;
+            break;
+          case "redeemToken":
+            this.state[prop] = redeemToken;
+            break;
+        }
+      }
     }
   },
 
   clearAction(options) {
     if (this.debug) {
-      console.log("clearMessageAction triggered");
+      console.log("clearMessageAction triggered", options);
     }
-    if (!options || Object.keys(options).length === 0) return
+    if (!options) return;
     const { all, transfer, transferBatch, leftToken, redeemToken } = options;
     if (!!all) {
       this.state.transfer = defaultTransfer();
@@ -77,16 +89,16 @@ export default {
       this.state.redeemToken = defaultRedeemToken();
 
     } else {
-      if (!!transfer)
+      if (transfer)
         this.state.transfer = defaultTransfer();
 
-      if (!!transferBatch)
+      if (transferBatch)
         this.state.transferBatch = defaultTransferBatch();
 
-      if (!!leftToken)
+      if (leftToken)
         this.state.leftToken = defaultLeftToken();
 
-      if (!!redeemToken)
+      if (redeemToken)
         this.state.redeemToken = defaultRedeemToken();
     }
   }
