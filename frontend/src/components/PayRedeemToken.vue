@@ -74,8 +74,10 @@
       <a-row v-for="record in payRecords" :key="record.account + record.tokenId">
         <a-col :span="5" :offset="4">
           <a-tooltip :color="'blue'" :trigger="'focus'">
-            <template #title>不能低于资产价值<span class="txt-num">{{ assetValue }}</span>{{ tokens[record.tokenId] }}，也不能超过余额<span
-              class="txt-num">{{ record.balance }}</span>{{
+            <template #title>不能低于资产价值<span class="txt-num">{{ assetValue }}</span>{{
+                tokens[record.tokenId]
+              }}，也不能超过余额<span
+                class="txt-num">{{ record.balance }}</span>{{
                 tokens[record.tokenId]
               }}
             </template>
@@ -115,6 +117,7 @@ export default {
       ethereum: null,
       payRecords: [],
       payToAddr: null,
+      confirmingPay: false,
       chainId: 0,
       owner: null,
       tokens: { 1: "Rock", 2: "Paper", 3: "Scissors" },
@@ -236,7 +239,7 @@ export default {
     payOne(record) {
       if (record.balance < 1) return;
       this.payRecords.length = 0;
-      record.payAmount = 1;
+      record.payAmount = this.assetValue;
       record.payTokenId = 1;
       console.log(record);
       this.payRecords.push(record);
@@ -248,12 +251,17 @@ export default {
       this.payRecords.length = 0;
       for (let record of this.selectedRows) {
         if (record.balance < 1) continue;
-        record.payAmount = 1;
+        record.payAmount = this.assetValue;
         this.payRecords.push(record);
       }
     },
     async confirmPay() {
       if (this.payRecords.length === 0) return;
+      else if (this.confirmingPay) {
+        this.$message.warn('正在支付中，请稍后再试')
+        return
+      }
+      this.confirmingPay = true;
       // 不管是批量支付还是单个支付， 接收方地址都是同一个
       let tx;
       try {
@@ -319,6 +327,7 @@ export default {
       } catch (e) {
         console.error(e);
       }
+      this.confirmingPay = false;
       this.payRecords.length = 0;
       console.log("confirmPay", tx);
     },
@@ -488,7 +497,9 @@ export default {
   margin-bottom: 10px;
 }
 
-.txt-num{
-  color: black;font-size: 24px;padding:0 6px
+.txt-num {
+  color: black;
+  font-size: 24px;
+  padding: 0 6px
 }
 </style>
