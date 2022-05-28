@@ -36,7 +36,7 @@ describe("Token contract", function () {
     // for it to be deployed(), which happens once its transaction has been
     // mined.
     hardhatToken = await Token.deploy();
-    await hardhatToken.init()
+    await hardhatToken.deployed()
   });
 
   // You can nest describe calls to create subsections.

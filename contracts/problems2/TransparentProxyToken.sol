@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "./Token.sol";
+import "../problems1/Token.sol";
 
 contract TransparentProxyToken is Token {
     function mint(address to, uint256 amount) external {
