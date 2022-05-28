@@ -27,7 +27,9 @@ async function main() {
         BatchPay: library.address
       }
     });
-  const proxyAddress = "0xffBc02DAb96E250CF898499097a9FC225BB0eDd0";
+
+  // const proxyAddress = "0xffBc02DAb96E250CF898499097a9FC225BB0eDd0";
+  const proxyAddress = "0xbD97E501F0A0D90f4C3121436D88636A1f588aED";
   const payRedeemToken = await upgrades.upgradeProxy(
     proxyAddress, payRedeem,
     { unsafeAllow: ["external-library-linking"] });
