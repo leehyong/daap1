@@ -2,8 +2,9 @@
 // It will be used by the Solidity compiler to validate its version.
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 // This is the main building block for smart contracts.
-contract Token{
+contract Token2 is Initializable{
     // Some string type variables to identify the token.
     // The `public` modifier makes a variable readable from outside the contract.
     string public name;
@@ -27,7 +28,7 @@ contract Token{
      * The `constructor` is executed only once when the contract is created.
      */
 
-    constructor() {
+    function initialize() public initializer {
         name = "Lhy  Token";
         symbol = "LT";
         totalSupply = 10000000;

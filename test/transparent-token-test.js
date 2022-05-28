@@ -32,7 +32,7 @@ describe("Token contract", function() {
   // time. It receives a callback, which can be async.
   beforeEach(async function() {
     // Get the ContractFactory and Signers here.
-    Token = await ethers.getContractFactory("Token");
+    Token = await ethers.getContractFactory("Token2");
     TransparentToken = await ethers.getContractFactory("TransparentProxyToken");
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
 

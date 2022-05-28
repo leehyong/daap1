@@ -1,8 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "../problems1/Token.sol";
+import "./Token2.sol";
 
-contract TransparentProxyToken is Token {
+contract TransparentProxyToken is Token2 {
     function mint(address to, uint256 amount) external {
         // Only owner can mint coin
         require(msg.sender == owner);
