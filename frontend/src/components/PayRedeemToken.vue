@@ -32,7 +32,7 @@
     <a-row style="margin-top: 10px">
       <a-col :span="4">
         <a-tooltip>
-          <template #title>只能选择同一账户下的不同token 进行批量支付"</template>
+          <template #title>从onwer账户批量支付不同的token给同一账户"</template>
           <a-button :disabled="selectedRows.length === 0" @click="payBatch">批量支付</a-button>
         </a-tooltip>
       </a-col>
@@ -45,12 +45,12 @@
             <a-col flex="1">
               <a-tooltip>
                 <template #title v-if="record.balance == 0">账户余额大于0才能使用支付功能</template>
-                <a-button @click="payOne(record)" :disabled="record.balance == 0" v-if="record.account !== owner">支付
+                <a-button @click="payOne(record)" :disabled="record.balance == 0" v-if="record.account == owner">支付
                 </a-button>
               </a-tooltip>
             </a-col>
             <a-col flex="1">
-              <a-button @click="redeemOne(record)" v-if="record.account !== owner">赎回</a-button>
+              <a-button @click="redeemOne(record)" v-if="record.account == owner">赎回</a-button>
             </a-col>
           </a-row>
         </template>
@@ -63,17 +63,22 @@
              :width="660"
              cancelText="取消" @ok="confirmPay"
              @cancel="cancelPay">
-      <a-row v-for="record in payRecords" :key="record.account + record.tokenId">
-        <a-col :span="16" style="display: flex;place-items: center">
-          <span style="color: blue;text-overflow: ellipsis" :title="record.account">{{ record.account }}</span>
+      <a-row style="margin-bottom: 10px">
+        <a-col :span="16" :offset="4" style="display: flex;place-items: center">
+          <a-select v-model:value="payToAddr" style="width: 100%">
+            <a-select-option key="noop">请选择地址</a-select-option>
+            <a-select-option v-for="ac in selectAccountOptions" :key="ac">{{ ac }}</a-select-option>
+          </a-select>
         </a-col>
-        <a-col :span="5">
+      </a-row>
+      <a-row v-for="record in payRecords" :key="record.account + record.tokenId">
+        <a-col :span="5" :offset="4">
           <a-tooltip :color="'blue'" :trigger="'focus'">
             <template #title>不能超过余额<span style="color: black;font-size: 24px;padding:0 6px">{{ record.balance }}</span>{{
                 tokens[record.tokenId]
               }}
             </template>
-            <a-input-number v-model:value="record.payAmount" :min="1" :max="record.balance" placehodler="支付数量" />
+            <a-input-number v-model:value="record.payAmount" :min="0" :max="record.balance" placehodler="支付数量" />
           </a-tooltip>
         </a-col>
         <a-col :span="3" style="display: flex;place-items: start">
@@ -111,6 +116,7 @@ export default {
     return {
       ethereum: null,
       payRecords: [],
+      payToAddr: null,
       chainId: 0,
       owner: null,
       tokens: { 1: "Rock", 2: "Paper", 3: "Scissors" },
@@ -149,10 +155,11 @@ export default {
       return {
         selectedRowKeys: this.selectedRowKeys,
         onChange: this.onSelectChange,
+        // type: "radio",
         hideSelectAll: true,
         getCheckboxProps: record => {
-          // owner 或者没有余额时，都不能支付
-          let disabled = record.account === this.owner || record.balance < 1; // owner 不能进行批量支付
+          // 不是owner 或者没有余额时，都不能支付
+          let disabled = record.account !== this.owner || record.balance < 1; // owner 不能进行批量支付
           if (!disabled && this.selectedFirstAccount) {
             // 只能选择同一账户下的不同token 进行批量支付
             disabled = this.selectedFirstAccount !== record.account;
@@ -248,32 +255,43 @@ export default {
     },
     async confirmPay() {
       if (this.payRecords.length === 0) return;
-      // 不管是批量支付还是单个支付， 地址都是同一个
-      let sendFrom = await ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-      sendFrom = sendFrom && sendFrom[0].toLowerCase();
-      if (!sendFrom){
-        console.log("no sendFrom");
-        return
-      }
-      let to = this.payRecords[0].account;
-      let signer = PROVIDER.getSigner(sendFrom);
-      const addrContract = TOKEN_CONTRACT.connect(signer);
-      console.log("signer", signer);
-      // const addrContract = signer.connect(PROVIDER);
-      let _signature;
+      // 不管是批量支付还是单个支付， 接收方地址都是同一个
       let tx;
-      const nonce = new Date().valueOf();
-      console.log("signerAddress", await signer.getAddress(), addrContract.address);
       try {
-        if (this.payRecords.length > 1) {
+        let sendFrom = await ethereum.request({
+          method: "eth_requestAccounts"
+        });
+        sendFrom = sendFrom && sendFrom[0].toLowerCase();
+        if (!sendFrom) {
+          console.log("no sendFrom");
+          this.payRecords.length = 0;
+          return;
+        }
+        let to = this.payToAddr;
+        let signer = PROVIDER.getSigner(sendFrom);
+        const addrContract = TOKEN_CONTRACT.connect(signer);
+        console.log("signer", signer);
+        // const addrContract = signer.connect(PROVIDER);
+        let _signature;
+        const nonce = new Date().valueOf();
+        console.log("signerAddress", await signer.getAddress(), addrContract.address);
+        let amounts = [];
+        let ids = [];
+        for (let item of this.payRecords) {
+          let amount = parseInt(item.payAmount, 10);
+          if (amount < 1) continue;
+          amounts.push(amount);
+          ids.push(parseInt(item.tokenId, 10));
+        }
+        if (ids.length === 0) {
+          this.payRecords.length = 0;
+          return;
+        } else if (ids.length > 1) {
           // 批量支付
-          let ids = this.payRecords.map(item => parseInt(item.tokenId));
-          let amounts = this.payRecords.map(item => parseInt(item.payAmount, 10));
           _signature = await signatureBatch(signer, addrContract.address, ids, nonce, amounts);
           console.log("ids-amounts", ids, amounts);
           tx = await addrContract.batchPay({
+            to,
             tokenIds: ids,
             amounts,
             signature: _signature,
@@ -281,35 +299,19 @@ export default {
           });
         } else {
           // 单个支付
-          const record = this.payRecords[0];
-          // let pk = ACCOUNTS_PRIVATE_KEYS[signerAddr.toLowerCase()];
-          // if (!pk.startsWith("0x")) pk = "0x" + pk;
-          // console.log("pkey", pk, typeof pk === "string" && !isHexString(pk));
-          const hash = await signatureOne(
-            to, addrContract.address, parseInt(record.tokenId, 10),
-            nonce, parseInt(record.payAmount, 10));
-          // _signature =  personalSign({
-          //   data: hash,
-          //   privateKey:  pk
-          // });
+          const tokenId = ids[0];
+          const amount = amounts[0];
           console.log("to from", to, sendFrom);
-          // const data = ((typeof (hash) === "string") ? toUtf8Bytes(hash) : hash);
-          // _signature = await signer.provider.send("personal_sign", [ hexlify(data), address.toLowerCase() ]);
-          _signature = await signer.signMessage(hash);
-          // console.log("signerAddr.toLowerCase()", signerAddr.toLowerCase());
-          // _signature = await this.ethereum.sendAsync({
-          //   method:"personal_sign",
-          //   params:[ ethers.utils.hexlify(hash), signerAddr.toLowerCase(),pk ],
-          //   callback:(error, resp) =>{
-          //     console.log(error, resp)
-          //   }
-          // });
-          console.log("_signature", _signature);
-          tx = await addrContract.pay(parseInt(record.tokenId, 10), parseInt(record.payAmount, 10), nonce, _signature);
+          _signature = await signatureOne(
+            signer,
+            to, addrContract.address, tokenId,
+            nonce, amount);
+          tx = await addrContract.pay(to, tokenId, amount, nonce, _signature);
         }
       } catch (e) {
         console.error(e);
       }
+      this.payRecords.length = 0;
       console.log("confirmPay", tx);
     },
     cancelPay() {
@@ -346,15 +348,23 @@ export default {
       console.log("signer", signer);
       let tx;
       try {
+        let sendFrom = await this.ethereum.request({
+          method: "eth_requestAccounts"
+        });
+        sendFrom = sendFrom && sendFrom[0].toLowerCase();
+        if (!sendFrom) {
+          console.log("no sendFrom");
+          return;
+        }
         this.minting = true;
-        let signerAddress = await signer.getAddress();
-        const daiWithSigner = await TOKEN_CONTRACT.connect(signer);
-        console.log("mint", signerAddress,
+        console.log("mint", sendFrom,
           this.mintAddr,
           this.amount,
           this.tokenId);
-        tx = await daiWithSigner.safeTransferFrom(
-          signerAddress,
+        let signer = PROVIDER.getSigner(sendFrom);
+        const addrContract = TOKEN_CONTRACT.connect(signer);
+        tx = await addrContract.safeTransferFrom(
+          sendFrom,
           this.mintAddr,
           this.tokenId,
           this.amount,
