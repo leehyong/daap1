@@ -23,7 +23,7 @@ TOKEN_CONTRACT.on("TransferSingle", (_, from, to, tokenId, amount, event) => {
     data: {
       from: from.toLowerCase(),
       to: to.toLowerCase(),
-      amount: amount.toString(),
+      amount: parseInt(amount.toString(), 10),
       tokenId: parseInt(tokenId.toString(), 10),
       data: true
     }
@@ -39,7 +39,7 @@ TOKEN_CONTRACT.on("Redeem", (account, tokenId, amount, event) => {
     prop: "redeemToken",
     data: {
       account: account.toLowerCase(),
-      amount: amount.toString(),
+      amount: parseInt(amount.toString(), 10),
       tokenId: parseInt(tokenId.toString(), 10),
       data: true
     }
@@ -55,7 +55,7 @@ TOKEN_CONTRACT.on("LeftToken", (account, tokenId, amount, event) => {
     prop: "leftToken",
     data: {
       account: account.toLowerCase(),
-      amount: amount.toString(),
+      amount: parseInt(amount.toString(), 10),
       tokenId: parseInt(tokenId.toString(), 10),
       data: true
     }
@@ -72,7 +72,7 @@ TOKEN_CONTRACT.on("TransferBatch", (_, from, to, tokenIds, amounts, event) => {
     data: {
       from: from.toLowerCase(),
       to: to.toLowerCase(),
-      amounts: amounts.map(val => val.toString()),
+      amounts: amounts.map(val => parseInt(val.toString(), 10)),
       tokenIds: tokenIds.map(val => parseInt(val.toString(), 10)),
       data: true
     }

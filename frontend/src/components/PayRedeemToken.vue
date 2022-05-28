@@ -527,7 +527,7 @@ export default {
       for (let ac of this.dataSource) {
         if (ac.account === val.from || ac.account === val.to) {
           for (let tid of val.tokenIds) {
-            ac.balance = await this.getAccountBalance(ac.account, val.tokenId);
+            ac.balance = await this.getAccountBalance(ac.account, tid);
             ac.updatingBalance = false;
             console.log("batch update balance", ac.account);
           }
