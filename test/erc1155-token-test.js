@@ -148,7 +148,7 @@ describe("Token contract", function() {
       // 66 byte string, which represents 32 bytes of data
       const messageHash = ethers.utils.solidityKeccak256(
         ["address", "address", "uint256", "uint256", "uint256"],
-        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+        [owner.address, hardhatToken.address, tokenId, nonce, amount]
       );
       // step 2
       // 32 bytes of data in Uint8Array
@@ -161,7 +161,7 @@ describe("Token contract", function() {
       console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
       expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
       await expect(
-        addr1Connect.pay(tokenId, amount, nonce, signature)
+        addr1Connect.pay(owner.address, tokenId, amount, nonce, signature)
       ).to.emit(hardhatToken, "TransferSingle")
         .withArgs(addr1.address, addr1.address, owner.address, tokenId, 20);
     });
@@ -185,7 +185,7 @@ describe("Token contract", function() {
       const messageHash = ethers.utils.solidityKeccak256(
         ["address", "address", "uint256", "uint256", "uint256"],
         // 交换amount 和nonce 的顺序，从而故意让签名验证失败
-        [addr1.address, hardhatToken.address, tokenId, amount, nonce]
+        [owner.address, hardhatToken.address, tokenId, amount, nonce]
       );
       // step 2
       // 32 bytes of data in Uint8Array
@@ -198,7 +198,7 @@ describe("Token contract", function() {
       console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
       expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
       await expect(
-        addr1Connect.pay(tokenId, amount, nonce, signature)
+        addr1Connect.pay(owner.address, tokenId, amount, nonce, signature)
       ).to.be.revertedWith("Invalid signature");
     });
 
@@ -220,8 +220,7 @@ describe("Token contract", function() {
       // 66 byte string, which represents 32 bytes of data
       let messageHash = ethers.utils.solidityKeccak256(
         ["address", "address", "uint256", "uint256", "uint256"],
-        // 交换amount 和nonce 的顺序，从而故意让签名验证失败
-        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+        [owner.address, hardhatToken.address, tokenId, nonce, amount]
       );
       // step 2
       // 32 bytes of data in Uint8Array
@@ -234,7 +233,7 @@ describe("Token contract", function() {
       console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
       expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
       await expect(
-        addr1Connect.pay(tokenId, amount, nonce, signature)
+        addr1Connect.pay(owner.address, tokenId, amount, nonce, signature)
       ).to.emit(hardhatToken, "TransferSingle")
         .withArgs(addr1.address, addr1.address, owner.address, tokenId, 20);
       amount = 30;
@@ -242,8 +241,7 @@ describe("Token contract", function() {
       // 66 byte string, which represents 32 bytes of data
       messageHash = ethers.utils.solidityKeccak256(
         ["address", "address", "uint256", "uint256", "uint256"],
-        // 交换amount 和nonce 的顺序，从而故意让签名验证失败
-        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+        [owner.address, hardhatToken.address, tokenId, nonce, amount]
       );
       // step 2
       // 32 bytes of data in Uint8Array
@@ -252,7 +250,7 @@ describe("Token contract", function() {
       // const signature = await addr1Connect.signMessage(tokenId, amount, nonce)
       signature = await addr1.signMessage(messageHashBinary);
       await expect(
-        addr1Connect.pay(tokenId, amount, nonce, signature)
+        addr1Connect.pay(owner.address, tokenId, amount, nonce, signature)
       ).to.be.revertedWith("Used nonce");
     });
 
@@ -274,7 +272,7 @@ describe("Token contract", function() {
       // 66 byte string, which represents 32 bytes of data
       const messageHash = ethers.utils.solidityKeccak256(
         ["address", "address", "uint256", "uint256", "uint256"],
-        [addr1.address, hardhatToken.address, tokenId, nonce, amount]
+        [owner.address, hardhatToken.address, tokenId, nonce, amount]
       );
       // step 2
       // 32 bytes of data in Uint8Array
@@ -287,7 +285,7 @@ describe("Token contract", function() {
       console.log("recovered", ethers.utils.verifyMessage(messageHashBinary, signature));
       expect(ethers.utils.verifyMessage(messageHashBinary, signature) === addr1.address)
       await expect(
-        addr1Connect.pay(tokenId, amount, nonce, signature)
+        addr1Connect.pay(owner.address, tokenId, amount, nonce, signature)
       ).to.emit(hardhatToken, "TransferSingle")
         .withArgs(addr1.address, addr1.address, owner.address, tokenId, 20)
         .to.emit(hardhatToken, "LeftToken")
