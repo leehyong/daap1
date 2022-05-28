@@ -16,6 +16,7 @@ contract ERC1155UUPSPaymentToken is ERC1155Upgradeable, UUPSUpgradeable, Ownable
     uint256 public constant Rock = 1;
     uint256 public constant Paper = 2;
     uint256 public constant Scissors = 3;
+    address internal leftTokenAddress;
     using ECDSA for bytes32;
 
     // 资产价值
@@ -28,29 +29,26 @@ contract ERC1155UUPSPaymentToken is ERC1155Upgradeable, UUPSUpgradeable, Ownable
     event LeftToken(address indexed account, uint256 tokenId, uint256 amount);
 
     /// builds a prefixed hash to mimic the behavior of eth_sign.
-
-    function signMessage(uint256 tokenId, uint256 amount, uint256 nonce) internal view returns (bytes32){
+    function isValidSignature(address addr, uint256 tokenId, uint256 amount, uint256 nonce, bytes memory signature) internal view returns (bool) {
         address _contractAddress = address(this);
-        bytes32 _data = keccak256(abi.encodePacked(_msgSender(), _contractAddress, tokenId, nonce, amount));
-        return _data.toEthSignedMessageHash();
+        bytes32 _data = keccak256(abi.encodePacked(addr, _contractAddress, tokenId, nonce, amount));
+        return _data.toEthSignedMessageHash().recover(signature) == _msgSender();
     }
 
-    function isValidSignature(uint256 tokenId, uint256 amount, uint256 nonce, bytes memory signature) internal view returns (bool) {
-        return signMessage(tokenId, amount, nonce).recover(signature) == _msgSender();
-    }
-
-    function pay(uint256 tokenId, uint256 amount, uint256 nonce, bytes memory signature) external {
+    function pay(address to, uint256 tokenId, uint256 amount, uint256 nonce, bytes memory signature) external {
         // 验证签名正确性
-        require(isValidSignature(tokenId, amount, nonce, signature), "Invalid signature");
+        require(isValidSignature(to, tokenId, amount, nonce, signature), "Invalid signature");
         // 保证 nonce 没被使用过
         require(!usedNonce[nonce], "Used nonce");
         require(amount >= assetValue);
         uint256 left = amount - assetValue;
-        // 支付给合约拥有者
-        safeTransferFrom(_msgSender(), owner(), tokenId, assetValue, _msgData());
+        // 支付给 to
+        safeTransferFrom(_msgSender(), to, tokenId, assetValue, _msgData());
         usedNonce[nonce] = true;
         // 余额 > 0， 才发送事件
         if (left > 0) {
+            // 把剩下的 token 转到合约专用账户里
+            safeTransferFrom(_msgSender(), leftTokenAddress, tokenId, left, _msgData());
             leftTokens[tokenId][_msgSender()] += left;
             emit LeftToken(_msgSender(), tokenId, left);
         }
@@ -69,6 +67,7 @@ contract ERC1155UUPSPaymentToken is ERC1155Upgradeable, UUPSUpgradeable, Ownable
         _mint(owner(), Rock, totalSupply2, "");
         _mint(owner(), Paper, totalSupply2, "");
         _mint(owner(), Scissors, totalSupply2, "");
+        leftTokenAddress = address(uint160(uint(keccak256(abi.encodePacked(block.timestamp)))));
     }
 
     //    function _msgSender() internal view virtual returns (address){

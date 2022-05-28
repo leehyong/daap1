@@ -3,6 +3,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 library BatchPay {
     struct PayInfo {
+        address to;
         uint256[] tokenIds;
         uint256[] amounts;
         bytes signature;
@@ -11,7 +12,7 @@ library BatchPay {
 
     using ECDSA for bytes32;
     function isValidSignatureBatchPay(PayInfo calldata info) external view returns (bool) {
-        bytes memory encoded = abi.encodePacked(msg.sender, address(this), info.nonce);
+        bytes memory encoded = abi.encodePacked(info.to, address(this), info.nonce);
         for (uint i = 0; i < info.amounts.length; i++) {
             encoded = bytes .concat(encoded, abi.encodePacked(info.tokenIds[i], info.amounts[i]));
         }

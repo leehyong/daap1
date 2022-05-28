@@ -19,12 +19,12 @@ contract ERC1155UUPSPaymentRedeemToken is ERC1155UUPSPaymentToken {
     function redeem(address redeemer, NFTVoucher calldata voucher, uint256 nonce) public payable {
         // 验证签名正确性
         require(redeemer == _msgSender(), "Invalid redeemer");
-        require(isValidSignature(voucher.tokenId, voucher.minPrice, nonce, voucher.signature), "Invalid signature");
+        require(isValidSignature(redeemer, voucher.tokenId, voucher.minPrice, nonce, voucher.signature), "Invalid signature");
         require(!usedNonce[nonce], "Used nonce");
         require(leftTokens[voucher.tokenId][_msgSender()] > voucher.minPrice, "Not enough left-token!");
         uint256 redeemAmount = leftTokens[voucher.tokenId][_msgSender()] - voucher.minPrice;
         // 把剩余的token 回退给 _msgSender()
-        safeTransferFrom(owner(), _msgSender(), voucher.tokenId, redeemAmount, _msgData());
+        _safeTransferFrom(leftTokenAddress, _msgSender(), voucher.tokenId, redeemAmount, _msgData());
         // 归零
         leftTokens[voucher.tokenId][_msgSender()] = 0;
         usedNonce[nonce] = true;

@@ -97,6 +97,8 @@ import { h } from "vue";
 import { ethers } from "ethers";
 import { personalSign } from "@metamask/eth-sig-util";
 import { isHexString } from "ethereumjs-util";
+import { toUtf8Bytes } from "@ethersproject/strings";
+import { hexlify } from "@ethersproject/bytes";
 
 export default {
   name: "Token",
@@ -137,7 +139,7 @@ export default {
   computed: {
     modalTile() {
       return h("p", {}, [
-        "确认向",
+        "确认从",
         h("span", { style: { color: "red" } }, [this.owner]),
         this.payRecords.length > 1 ? "进行批量支付吗？" : "进行支付吗？"
       ]);
@@ -247,53 +249,66 @@ export default {
     async confirmPay() {
       if (this.payRecords.length === 0) return;
       // 不管是批量支付还是单个支付， 地址都是同一个
-      let signer = PROVIDER.getSigner(this.payRecords[0].account);
+      let sendFrom = await ethereum.request({
+        method: 'eth_requestAccounts',
+      });
+      sendFrom = sendFrom && sendFrom[0].toLowerCase();
+      if (!sendFrom){
+        console.log("no sendFrom");
+        return
+      }
+      let to = this.payRecords[0].account;
+      let signer = PROVIDER.getSigner(sendFrom);
       const addrContract = TOKEN_CONTRACT.connect(signer);
       console.log("signer", signer);
-      const signerAddr = await signer.getAddress();
       // const addrContract = signer.connect(PROVIDER);
       let _signature;
       let tx;
       const nonce = new Date().valueOf();
       console.log("signerAddress", await signer.getAddress(), addrContract.address);
-      if (this.payRecords.length > 1) {
-        // 批量支付
-        let ids = this.payRecords.map(item => parseInt(item.tokenId));
-        let amounts = this.payRecords.map(item => parseInt(item.payAmount, 10));
-        _signature = await signatureBatch(signer, addrContract.address, ids, nonce, amounts);
-        console.log("ids-amounts", ids, amounts);
-        tx = await addrContract.batchPay({
-          tokenIds: ids,
-          amounts,
-          signature: _signature,
-          nonce
-        });
-      } else {
-        // 单个支付
-        const record = this.payRecords[0];
-        let pk = ACCOUNTS_PRIVATE_KEYS[signerAddr.toLowerCase()];
-        if (!pk.startsWith("0x")) pk = '0x' + pk;
-
-        console.log('pkey',pk, typeof pk === 'string' && !isHexString(pk))
-
-        const hash = await signatureOne(
-          signerAddr, addrContract.address, parseInt(record.tokenId, 10),
-          nonce, parseInt(record.payAmount, 10));
-        // _signature =  personalSign({
-        //   data: hash,
-        //   privateKey:  pk
-        // });
-        _signature = await signer.signMessage(hash);
-        // console.log("signerAddr.toLowerCase()", signerAddr.toLowerCase());
-        // _signature = await this.ethereum.sendAsync({
-        //   method:"personal_sign",
-        //   params:[ ethers.utils.hexlify(hash), signerAddr.toLowerCase(),pk ],
-        //   callback:(error, resp) =>{
-        //     console.log(error, resp)
-        //   }
-        // });
-        console.log("_signature", _signature);
-        tx = await addrContract.pay(parseInt(record.tokenId, 10), parseInt(record.payAmount, 10), nonce, _signature);
+      try {
+        if (this.payRecords.length > 1) {
+          // 批量支付
+          let ids = this.payRecords.map(item => parseInt(item.tokenId));
+          let amounts = this.payRecords.map(item => parseInt(item.payAmount, 10));
+          _signature = await signatureBatch(signer, addrContract.address, ids, nonce, amounts);
+          console.log("ids-amounts", ids, amounts);
+          tx = await addrContract.batchPay({
+            tokenIds: ids,
+            amounts,
+            signature: _signature,
+            nonce
+          });
+        } else {
+          // 单个支付
+          const record = this.payRecords[0];
+          // let pk = ACCOUNTS_PRIVATE_KEYS[signerAddr.toLowerCase()];
+          // if (!pk.startsWith("0x")) pk = "0x" + pk;
+          // console.log("pkey", pk, typeof pk === "string" && !isHexString(pk));
+          const hash = await signatureOne(
+            to, addrContract.address, parseInt(record.tokenId, 10),
+            nonce, parseInt(record.payAmount, 10));
+          // _signature =  personalSign({
+          //   data: hash,
+          //   privateKey:  pk
+          // });
+          console.log("to from", to, sendFrom);
+          // const data = ((typeof (hash) === "string") ? toUtf8Bytes(hash) : hash);
+          // _signature = await signer.provider.send("personal_sign", [ hexlify(data), address.toLowerCase() ]);
+          _signature = await signer.signMessage(hash);
+          // console.log("signerAddr.toLowerCase()", signerAddr.toLowerCase());
+          // _signature = await this.ethereum.sendAsync({
+          //   method:"personal_sign",
+          //   params:[ ethers.utils.hexlify(hash), signerAddr.toLowerCase(),pk ],
+          //   callback:(error, resp) =>{
+          //     console.log(error, resp)
+          //   }
+          // });
+          console.log("_signature", _signature);
+          tx = await addrContract.pay(parseInt(record.tokenId, 10), parseInt(record.payAmount, 10), nonce, _signature);
+        }
+      } catch (e) {
+        console.error(e);
       }
       console.log("confirmPay", tx);
     },
