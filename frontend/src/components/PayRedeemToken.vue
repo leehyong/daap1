@@ -74,11 +74,13 @@
       <a-row v-for="record in payRecords" :key="record.account + record.tokenId">
         <a-col :span="5" :offset="4">
           <a-tooltip :color="'blue'" :trigger="'focus'">
-            <template #title>不能超过余额<span style="color: black;font-size: 24px;padding:0 6px">{{ record.balance }}</span>{{
+            <template #title>不能低于资产价值<span class="txt-num">{{ assetValue }}</span>{{ tokens[record.tokenId] }}，也不能超过余额<span
+              class="txt-num">{{ record.balance }}</span>{{
                 tokens[record.tokenId]
               }}
             </template>
-            <a-input-number v-model:value="record.payAmount" :min="0" :max="record.balance" placehodler="支付数量" />
+            <a-input-number v-model:value="record.payAmount" :min="assetValue" :max="record.balance"
+                            placehodler="支付数量" />
           </a-tooltip>
         </a-col>
         <a-col :span="3" style="display: flex;place-items: start">
@@ -122,7 +124,7 @@ export default {
       tokens: { 1: "Rock", 2: "Paper", 3: "Scissors" },
       tokenId: "1",
       mintAddr: null,
-      assetValue:10,
+      assetValue: 10,
       accounts: [],
       minting: false,
       tokenContract: null,
@@ -337,8 +339,14 @@ export default {
       }
     },
     async getTokenContract() {
-      this.owner = await TOKEN_CONTRACT.owner();
-      this.owner = this.owner.toLowerCase();
+      try {
+        this.owner = await TOKEN_CONTRACT.owner();
+        this.owner = this.owner.toLowerCase();
+        this.assetValue = await TOKEN_CONTRACT.assetValue();
+        this.assetValue = this.assetValue.toString();
+      } catch (e) {
+        console.log(e);
+      }
       console.log(this.owner);
     },
     msgData(msg) {
@@ -396,14 +404,6 @@ export default {
       }
       this.chainId = chainId;
     },
-    async getAssetValue() {
-      const [err1, chainId] = await catchEm();
-      if (err1) {
-        console.error(err1);
-      }
-      this.chainId = chainId;
-    },
-
     async getAccounts() {
       const [err2, accounts] = await catchEm(this.ethereum.request(
         {
@@ -490,5 +490,9 @@ export default {
 .box h1 {
   text-align: center;
   margin-bottom: 10px;
+}
+
+.txt-num{
+  color: black;font-size: 24px;padding:0 6px
 }
 </style>
