@@ -122,6 +122,7 @@ export default {
       tokens: { 1: "Rock", 2: "Paper", 3: "Scissors" },
       tokenId: "1",
       mintAddr: null,
+      assetValue:10,
       accounts: [],
       minting: false,
       tokenContract: null,
@@ -288,7 +289,13 @@ export default {
           return;
         } else if (ids.length > 1) {
           // 批量支付
-          _signature = await signatureBatch(signer, addrContract.address, ids, nonce, amounts);
+          _signature = await signatureBatch(
+            signer,
+            to,
+            addrContract.address,
+            ids,
+            nonce,
+            amounts);
           console.log("ids-amounts", ids, amounts);
           tx = await addrContract.batchPay({
             to,
@@ -304,8 +311,11 @@ export default {
           console.log("to from", to, sendFrom);
           _signature = await signatureOne(
             signer,
-            to, addrContract.address, tokenId,
-            nonce, amount);
+            to,
+            addrContract.address,
+            tokenId,
+            nonce,
+            amount);
           tx = await addrContract.pay(to, tokenId, amount, nonce, _signature);
         }
       } catch (e) {
@@ -381,6 +391,13 @@ export default {
 
     async getChainId() {
       const [err1, chainId] = await catchEm(this.ethereum.request({ method: "eth_chainId" }));
+      if (err1) {
+        console.error(err1);
+      }
+      this.chainId = chainId;
+    },
+    async getAssetValue() {
+      const [err1, chainId] = await catchEm();
       if (err1) {
         console.error(err1);
       }
